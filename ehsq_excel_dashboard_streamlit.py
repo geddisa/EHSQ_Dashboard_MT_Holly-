@@ -7,45 +7,30 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
 
 # =========================
-# LOAD INCIDENT DATA
+# LOAD DATA
 # =========================
 @st.cache_data
 def load_incidents(uploaded):
-    try:
-        file = uploaded if uploaded else "IncidentReports_All_MTH_2026-06-18.xlsx"
-        df = pd.read_excel(file, engine="openpyxl")
-
-        df.columns = [str(c).strip() for c in df.columns]
-        df = df.replace({pd.NA: None})
-
-        return df
-
-    except Exception as e:
-        st.error(f"Error loading incidents: {e}")
-        return pd.DataFrame()
+    file = uploaded if uploaded else "IncidentReports_All_MTH_2026-06-18.xlsx"
+    df = pd.read_excel(file, engine="openpyxl")
+    df.columns = [str(c).strip() for c in df.columns]
+    df = df.replace({pd.NA: None})
+    return df
 
 
-# =========================
-# LOAD METRICS DATA
-# =========================
 @st.cache_data
 def load_metrics(uploaded):
-    try:
-        file = uploaded if uploaded else "EHSQ Metrics.xlsx"
+    file = uploaded if uploaded else "EHSQ Metrics.xlsx"
 
-        tcir = pd.read_excel(file, sheet_name="TCIR and DART", skiprows=2, engine="openpyxl")
-        fsi = pd.read_excel(file, sheet_name="FSI Reports", skiprows=3, engine="openpyxl")
-        capas = pd.read_excel(file, sheet_name="CAPAs", skiprows=3, engine="openpyxl")
+    tcir = pd.read_excel(file, sheet_name="TCIR and DART", skiprows=2, engine="openpyxl")
+    fsi = pd.read_excel(file, sheet_name="FSI Reports", skiprows=3, engine="openpyxl")
+    capas = pd.read_excel(file, sheet_name="CAPAs", skiprows=3, engine="openpyxl")
 
-        for df in [tcir, fsi, capas]:
-            df.columns = [str(c).strip() for c in df.columns]
-            df.replace({pd.NA: None}, inplace=True)
+    for d in [tcir, fsi, capas]:
+        d.columns = [str(c).strip() for c in d.columns]
+        d.replace({pd.NA: None}, inplace=True)
 
-        return tcir, fsi, capas
-
-    except Exception as e:
-        st.warning(f"Metrics load failed: {e}")
-        return None, None, None
+    return tcir, fsi, capas
 
 
 # =========================
@@ -53,70 +38,44 @@ def load_metrics(uploaded):
 # =========================
 def main():
 
-    st.title("📊 EHSQ Performance Dashboard")
+    st.title("📊 EHSQ FULL ANALYTICS DASHBOARD")
 
-    # Sidebar
-    st.sidebar.header("Uploads")
     inc_file = st.sidebar.file_uploader("Incident File", type=["xlsx"])
     met_file = st.sidebar.file_uploader("Metrics File", type=["xlsx"])
 
     df = load_incidents(inc_file)
     tcir, fsi, capas = load_metrics(met_file)
 
-    if df.empty:
-        st.warning("No incident data loaded.")
-        return
+    df["Date"] = pd.to_datetime(df.get("Date of Incident (Local Plant Time)"), errors="coerce")
 
-    # =========================
-    # PREPROCESS
-    # =========================
-    df["Date"] = pd.to_datetime(
-        df.get("Date of Incident (Local Plant Time)"),
-        errors="coerce"
-    )
+    tab1, tab2 = st.tabs(["🚨 Incident", "📈 Metrics"])
 
-    df["High Risk"] = df.get("Risk Level", "").astype(str).str.lower().isin(["high", "major"])
-
-    df["Recordable"] = df.get("Injury Classification", "").isin([
-        "Days Away From Work",
-        "Restricted or Transferred Work",
-        "Other Recordable Case"
-    ])
-
-    # FILTER
-    if "Department" in df.columns:
-        departments = df["Department"].dropna().unique()
-        selected = st.sidebar.multiselect("Department", departments, default=departments)
-        df = df[df["Department"].isin(selected)]
-
-    tab1, tab2 = st.tabs(["🚨 Incident Dashboard", "📈 Metrics Dashboard"])
-
-    # ==================================================
+    # ======================================================
     # INCIDENT TAB
-    # ==================================================
+    # ======================================================
     with tab1:
 
-        st.subheader("🚦 KPIs")
+        st.subheader("KPIs")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Total Incidents", len(df))
-        c2.metric("Severe Incidents", int(df["High Risk"].sum()))
-        c3.metric("Recordables", int(df["Recordable"].sum()))
+        c1.metric("Total", len(df))
+        c2.metric("Severe", df.get("Risk Level", "").astype(str).str.lower().isin(["high","major"]).sum())
+        c3.metric("Recordable", df.get("Injury Classification","").isin([
+            "Days Away From Work","Restricted or Transferred Work","Other Recordable Case"
+        ]).sum())
 
         # Trend
-        st.subheader("📈 Incident Trend")
-        trend_df = df.dropna(subset=["Date"]).copy()
-        trend_df["Month"] = trend_df["Date"].dt.to_period("M").dt.to_timestamp()
-        trend = trend_df.groupby("Month").size().reset_index(name="Count")
+        trend = df.dropna(subset=["Date"]).copy()
+        trend["Month"] = trend["Date"].dt.to_period("M").dt.to_timestamp()
+        trend = trend.groupby("Month").size().reset_index(name="Count")
 
-        if not trend.empty:
-            fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
-            fig.update_traces(textposition="top center")
-            st.plotly_chart(fig, use_container_width=True)
+        fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
+        fig.update_traces(textposition="top center")
+        st.plotly_chart(fig, use_container_width=True)
 
-        # =========================
-        # SEVERITY GRAPH (MATCH IMAGE)
-        # =========================
-        st.subheader("🔥 Incident Severity Graph")
+        # =========================================
+        # SEVERITY (EXACT LOOK)
+        # =========================================
+        st.subheader("🔥 Severity")
 
         severity_mapping = {
             'Property Damage': 25,
@@ -130,18 +89,16 @@ def main():
             'Recordable - Fatality': 600
         }
 
-        df["Points"] = df["Injury Classification"].map(severity_mapping) \
-            .fillna(df["Type"].map(severity_mapping)) \
+        df["Points"] = df["Injury Classification"].map(severity_mapping)\
+            .fillna(df["Type"].map(severity_mapping))\
             .fillna(0)
 
         df["Week"] = df["Date"].dt.isocalendar().week
         weekly = df.groupby("Week")["Points"].sum().reset_index()
 
-        full_weeks = pd.DataFrame({"Week": range(1, 25)})
-        weekly = full_weeks.merge(weekly, on="Week", how="left").fillna(0)
+        weekly = pd.DataFrame({"Week": range(1,25)}).merge(weekly, on="Week", how="left").fillna(0)
 
         fig = go.Figure()
-
         fig.add_hrect(y0=0, y1=400, fillcolor="green", opacity=0.25)
         fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.35)
         fig.add_hrect(y0=800, y1=1300, fillcolor="lightcoral", opacity=0.35)
@@ -151,94 +108,105 @@ def main():
             y=weekly["Points"],
             mode="lines+markers",
             line=dict(color="black", width=4),
-            marker=dict(color="black", size=8),
-            name="Weekly Severity Total"
+            marker=dict(color="black", size=8)
         ))
 
-        fig.add_annotation(
-            x=25, y=600,
-            text="25 pt: Property Damage<br>50 pt: Record Only<br>75 pt: First Aid<br>150 pt: Spill/Explosion<br>250 pt: Recordable<br>350 pt: Days Away<br>600 pt: Fatality",
-            showarrow=False,
-            bgcolor="white",
-            bordercolor="gray"
-        )
-
-        fig.update_layout(
-            xaxis=dict(range=[1, 24], dtick=1),
-            yaxis=dict(range=[0, 1250], dtick=200)
-        )
+        fig.update_layout(xaxis=dict(dtick=1, range=[1,24]),
+                          yaxis=dict(dtick=200, range=[0,1250]))
 
         st.plotly_chart(fig, use_container_width=True)
 
-    # ==================================================
-    # METRICS TAB (FULL CHARTS)
-    # ==================================================
+        # Hazards
+        if "Hazard Type" in df.columns:
+            hz = df["Hazard Type"].value_counts().head(10).reset_index()
+            hz.columns = ["Hazard","Count"]
+
+            fig = px.bar(hz, x="Hazard", y="Count", text="Count")
+            fig.update_traces(textposition="outside")
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ======================================================
+    # METRICS TAB (ALL CHARTS)
+    # ======================================================
     with tab2:
 
         # =========================
         # TCIR / DART
         # =========================
-        if tcir is not None:
+        st.subheader("TCIR & DART")
 
-            st.subheader("📊 TCIR & DART Trends")
+        cols = [str(c).lower() for c in tcir.columns]
 
-            cols = [str(c).lower() for c in tcir.columns]
+        month = next((tcir.columns[i] for i,c in enumerate(cols) if "month" in c), None)
+        tcir_col = next((tcir.columns[i] for i,c in enumerate(cols) if "tcir" in c and "actual" in c), None)
+        dart_col = next((tcir.columns[i] for i,c in enumerate(cols) if "dart" in c and "actual" in c), None)
 
-            month = next((tcir.columns[i] for i, c in enumerate(cols) if "month" in c), None)
-            tcir_col = next((tcir.columns[i] for i, c in enumerate(cols) if "tcir" in c and "actual" in c), None)
-            dart_col = next((tcir.columns[i] for i, c in enumerate(cols) if "dart" in c and "actual" in c), None)
+        if month and tcir_col:
+            fig = px.line(tcir, x=month, y=tcir_col, markers=True, text=tcir_col)
+            fig.update_traces(textposition="top center")
+            st.plotly_chart(fig, use_container_width=True)
 
-            if month and tcir_col:
-                fig = px.line(tcir, x=month, y=tcir_col, markers=True, text=tcir_col)
-                fig.update_traces(textposition="top center")
-                st.plotly_chart(fig, use_container_width=True)
-
-            if month and dart_col:
-                fig = px.line(tcir, x=month, y=dart_col, markers=True, text=dart_col)
-                fig.update_traces(textposition="top center")
-                st.plotly_chart(fig, use_container_width=True)
+        if month and dart_col:
+            fig = px.line(tcir, x=month, y=dart_col, markers=True, text=dart_col)
+            fig.update_traces(textposition="top center")
+            st.plotly_chart(fig, use_container_width=True)
 
         # =========================
-        # CAPA CHARTS
+        # CAPA FULL DASHBOARD
         # =========================
-        if capas is not None:
+        st.subheader("🛠️ CAPA ANALYTICS")
 
-            st.subheader("🛠️ CAPA Performance")
+        for key in ["Status","Department","Assigned","Type"]:
+            col = next((c for c in capas.columns if key.lower() in c.lower()), None)
 
-            status_col = next((c for c in capas.columns if "status" in c.lower()), None)
-            if status_col:
-                data = capas[status_col].value_counts().reset_index()
-                data.columns = ["Status", "Count"]
-                fig = px.bar(data, x="Status", y="Count", text="Count", color="Status")
+            if col:
+                data = capas[col].fillna("Unknown").value_counts().reset_index()
+                data.columns = [key,"Count"]
+
+                fig = px.bar(data, x=key, y="Count", text="Count")
                 fig.update_traces(textposition="outside")
                 st.plotly_chart(fig, use_container_width=True)
 
-            dept_col = next((c for c in capas.columns if "department" in c.lower()), None)
-            if dept_col:
-                data = capas[dept_col].value_counts().reset_index()
-                data.columns = ["Department", "Count"]
-                fig = px.bar(data, x="Department", y="Count", text="Count")
+        # CAPA Trend
+        date_col = next((c for c in capas.columns if "date" in c.lower()), None)
+        if date_col:
+            capas["Date"] = pd.to_datetime(capas[date_col], errors="coerce")
+            trend = capas.dropna(subset=["Date"])
+            trend["Month"] = trend["Date"].dt.to_period("M").dt.to_timestamp()
+            trend = trend.groupby("Month").size().reset_index(name="Count")
+
+            fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
+            fig.update_traces(textposition="top center")
+            st.plotly_chart(fig, use_container_width=True)
+
+        # =========================
+        # FSI FULL DASHBOARD
+        # =========================
+        st.subheader("📋 FSI ANALYTICS")
+
+        for key in ["Type","Category","Department","Assigned"]:
+            col = next((c for c in fsi.columns if key.lower() in c.lower()), None)
+
+            if col:
+                data = fsi[col].fillna("Unknown").value_counts().reset_index()
+                data.columns = [key,"Count"]
+
+                fig = px.bar(data, x=key, y="Count", text="Count")
                 fig.update_traces(textposition="outside")
                 st.plotly_chart(fig, use_container_width=True)
 
-        # =========================
-        # FSI CHARTS
-        # =========================
-        if fsi is not None:
+        # FSI Trend
+        date_col = next((c for c in fsi.columns if "date" in c.lower()), None)
+        if date_col:
+            fsi["Date"] = pd.to_datetime(fsi[date_col], errors="coerce")
+            trend = fsi.dropna(subset=["Date"])
+            trend["Month"] = trend["Date"].dt.to_period("M").dt.to_timestamp()
+            trend = trend.groupby("Month").size().reset_index(name="Count")
 
-            st.subheader("📋 FSI Reports")
-
-            type_col = next((c for c in fsi.columns if "type" in c.lower() or "category" in c.lower()), None)
-            if type_col:
-                data = fsi[type_col].value_counts().reset_index()
-                data.columns = ["Category", "Count"]
-                fig = px.bar(data, x="Category", y="Count", text="Count")
-                fig.update_traces(textposition="outside")
-                st.plotly_chart(fig, use_container_width=True)
+            fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
+            fig.update_traces(textposition="top center")
+            st.plotly_chart(fig, use_container_width=True)
 
 
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     main()
