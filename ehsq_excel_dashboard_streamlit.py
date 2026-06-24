@@ -2,6 +2,9 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
+# =========================
+# SETTINGS
+# =========================
 st.set_page_config(page_title="EHSQ KPI Dashboard", layout="wide")
 
 # =========================
@@ -15,32 +18,53 @@ def load_data(uploaded):
         else:
             df = pd.read_excel("IncidentReports_All_MTH_2026-06-18.xlsx", engine="openpyxl")
 
-        df.columns = df.columns.str.strip()
+        # Clean columns
+        df.columns = df.columns.astype(str).str.strip()
+
+        # Replace problematic values (important for Plotly)
+        df = df.replace({pd.NA: None})
+
         return df
+
     except Exception as e:
-        st.error(f"Error loading file: {e}")
+        st.error(f"❌ Error loading file: {e}")
         return pd.DataFrame()
 
 
 # =========================
-# MAIN APP
+# SAFE PLOT FUNCTION
+# =========================
+def safe_plot(fig, title="Chart"):
+    try:
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.warning(f"⚠️ {title} failed to render: {e}")
+
+
+# =========================
+# MAIN
 # =========================
 def main():
 
     st.title("📊 EHSQ Performance Dashboard")
 
+    # Upload
     uploaded = st.sidebar.file_uploader("Upload Incident File", type=["xlsx"])
+
     df = load_data(uploaded)
 
     if df.empty:
-        st.warning("No data loaded")
+        st.warning("⚠️ No data loaded.")
         return
 
     # =========================
     # PREPROCESSING
     # =========================
     if "Date of Incident (Local Plant Time)" in df.columns:
-        df["Date"] = pd.to_datetime(df["Date of Incident (Local Plant Time)"], errors="coerce")
+        df["Date"] = pd.to_datetime(
+            df["Date of Incident (Local Plant Time)"],
+            errors="coerce"
+        )
 
     if "Injury Classification" in df.columns:
         df["Recordable"] = df["Injury Classification"].isin([
@@ -57,93 +81,97 @@ def main():
         df["High Risk"] = False
 
     # =========================
-    # KPI CARDS (TOP ROW)
+    # KPI CARDS
     # =========================
-    st.subheader("Key Performance Indicators")
+    st.subheader("🚦 Key Performance Indicators")
 
-    col1, col2, col3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-    col1.metric("Total Incidents", len(df))
-    col2.metric("Severe Incidents", int(df["High Risk"].sum()))
-    col3.metric("Recordables", int(df["Recordable"].sum()))
+    c1.metric("Total Incidents", len(df))
+    c2.metric("Severe Incidents", int(df["High Risk"].sum()))
+    c3.metric("Recordables", int(df["Recordable"].sum()))
 
     # =========================
-    # INCIDENT TREND
+    # INCIDENT TREND (FIXED)
     # =========================
-    st.subheader("Incidents Over Time")
+    st.subheader("📈 Incidents Over Time")
 
     if "Date" in df.columns:
-        trend = df.dropna(subset=["Date"]).groupby(df["Date"].dt.to_period("M")).size()
-        trend = trend.reset_index(name="Count")
+        trend_df = df.dropna(subset=["Date"]).copy()
 
-        fig = px.line(trend, x="Date", y="Count", markers=True)
-        st.plotly_chart(fig, use_container_width=True)
+        # ✅ FIX: Convert Period → Timestamp
+        trend_df["Month"] = trend_df["Date"].dt.to_period("M").dt.to_timestamp()
+
+        trend = trend_df.groupby("Month").size().reset_index(name="Count")
+
+        if not trend.empty:
+            fig = px.line(trend, x="Month", y="Count", markers=True)
+            safe_plot(fig, "Trend Chart")
 
     # =========================
     # BREAKDOWNS
     # =========================
+    st.subheader("📊 Breakdown Analysis")
+
     col1, col2 = st.columns(2)
 
-    # Injury Classification
     if "Injury Classification" in df.columns:
         with col1:
             fig = px.histogram(df, x="Injury Classification", title="Injury Classification")
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plot(fig, "Injury Classification")
 
-    # Hazard Type
     if "Hazard Type" in df.columns:
         with col2:
             fig = px.histogram(df, x="Hazard Type", title="Hazard Type")
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plot(fig, "Hazard Type")
 
-    # =========================
-    # INCIDENT TYPE + DEPARTMENT
-    # =========================
     col3, col4 = st.columns(2)
 
     if "Type" in df.columns:
         with col3:
             fig = px.histogram(df, x="Type", title="Incident Type")
-            st.plotly_chart(fig, use_container_width=True)
+            safe_plot(fig, "Incident Type")
 
     if "Department" in df.columns:
         with col4:
-            fig = px.histogram(df, x="Department", title="Department Breakdown")
-            st.plotly_chart(fig, use_container_width=True)
+            fig = px.histogram(df, x="Department", title="Department")
+            safe_plot(fig, "Department")
 
     # =========================
-    # TOP RISKS / HAZARDS
+    # TOP RISKS
     # =========================
-    st.subheader("Top Risks & Hazards")
+    st.subheader("⚠️ Top Risk Factors")
 
     if "Risk Factor" in df.columns:
-        risk_counts = df["Risk Factor"].value_counts().head(10).reset_index()
-        risk_counts.columns = ["Risk Factor", "Count"]
+        risk_df = df["Risk Factor"].fillna("Unknown").value_counts().head(10).reset_index()
+        risk_df.columns = ["Risk Factor", "Count"]
 
-        fig = px.bar(risk_counts.sort_values("Count"),
-                     x="Count", y="Risk Factor",
-                     orientation="h",
-                     title="Top Risk Factors")
+        fig = px.bar(
+            risk_df.sort_values("Count"),
+            x="Count",
+            y="Risk Factor",
+            orientation="h"
+        )
 
-        st.plotly_chart(fig, use_container_width=True)
+        safe_plot(fig, "Top Risk Factors")
 
     # =========================
-    # KPI INSIGHT AREA
+    # INSIGHTS PANEL
     # =========================
-    st.subheader("AI Insights")
+    st.subheader("🧠 Key Insights")
 
     st.info("""
-    • Most incidents are driven by **Line of Fire, Mobile Equipment, and Heat Exposure**
-    • Repeated injuries involve **hands, fingers, and lower body**
-    • Heat stress and ergonomic injuries show recurring patterns
-    • Environmental risks include **air, chemical, and spill-related incidents**
-    • DART-related injuries indicate impacts to work capability
+    • High frequency of **Line of Fire, Mobile Equipment, and Heat Stress incidents**
+    • Most injuries affect **hands, fingers, and lower body**
+    • Repeated patterns indicate **systemic hazard exposure**
+    • Environmental risks include **air quality, spills, and chemical events**
+    • Recordable injuries are affecting operational performance (DART impact)
     """)
 
     # =========================
     # FULL TABLE
     # =========================
-    st.subheader("Full Incident Data")
+    st.subheader("📋 Full Incident Data")
 
     st.dataframe(df, use_container_width=True)
 
