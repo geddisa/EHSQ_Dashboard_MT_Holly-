@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -13,40 +14,35 @@ def load_incidents(uploaded):
     try:
         file = uploaded if uploaded else "IncidentReports_All_MTH_2026-06-18.xlsx"
         df = pd.read_excel(file, engine="openpyxl")
-
         df.columns = [str(c).strip() for c in df.columns]
         df = df.replace({pd.NA: None})
-
         return df
-
     except Exception as e:
         st.error(f"Error loading incidents: {e}")
         return pd.DataFrame()
 
 
 # =========================
-# LOAD METRICS DATA
+# LOAD METRICS DATA (ALL SHEETS ✅)
 # =========================
 @st.cache_data
 def load_metrics(uploaded):
     try:
         file = uploaded if uploaded else "EHSQ Metrics.xlsx"
 
-        df = pd.read_excel(
-            file,
-            sheet_name="TCIR and DART",
-            skiprows=2,
-            engine="openpyxl"
-        )
+        tcir = pd.read_excel(file, sheet_name="TCIR and DART", skiprows=2, engine="openpyxl")
+        fsi = pd.read_excel(file, sheet_name="FSI Reports", skiprows=3, engine="openpyxl")
+        capas = pd.read_excel(file, sheet_name="CAPAs", skiprows=3, engine="openpyxl")
 
-        # ✅ FIX: force all columns to string
-        df.columns = [str(c).strip() for c in df.columns]
+        for df in [tcir, fsi, capas]:
+            df.columns = [str(c).strip() for c in df.columns]
+            df.replace({pd.NA: None}, inplace=True)
 
-        return df
+        return tcir, fsi, capas
 
     except Exception as e:
         st.warning(f"Metrics load failed: {e}")
-        return pd.DataFrame()
+        return None, None, None
 
 
 # =========================
@@ -62,7 +58,7 @@ def main():
     met_file = st.sidebar.file_uploader("Metrics File", type=["xlsx"])
 
     df = load_incidents(inc_file)
-    metrics = load_metrics(met_file)
+    tcir, fsi, capas = load_metrics(met_file)
 
     if df.empty:
         st.warning("No incident data loaded.")
@@ -85,7 +81,7 @@ def main():
     ])
 
     # =========================
-    # FILTERS
+    # FILTER
     # =========================
     if "Department" in df.columns:
         dept_filter = st.sidebar.multiselect(
@@ -101,11 +97,10 @@ def main():
     tab1, tab2 = st.tabs(["🚨 Incident Dashboard", "📈 Metrics Dashboard"])
 
     # =========================================================
-    # TAB 1 — INCIDENT
+    # TAB 1 — INCIDENTS
     # =========================================================
     with tab1:
 
-        # KPIs
         st.subheader("🚦 KPI Overview")
 
         c1, c2, c3 = st.columns(3)
@@ -129,7 +124,7 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
 
         # =========================
-        # ✅ SEVERITY GRAPH (MATCHED)
+        # ✅ EXACT SEVERITY GRAPH
         # =========================
         st.subheader("🔥 Incident Severity Graph")
 
@@ -150,7 +145,6 @@ def main():
             .fillna(0)
 
         df["Week"] = df["Date"].dt.isocalendar().week
-
         weekly = df.groupby("Week")["Points"].sum().reset_index()
 
         full_weeks = pd.DataFrame({"Week": range(1, 25)})
@@ -158,12 +152,10 @@ def main():
 
         fig = go.Figure()
 
-        # Background zones
         fig.add_hrect(y0=0, y1=400, fillcolor="green", opacity=0.25, line_width=0)
         fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.35, line_width=0)
         fig.add_hrect(y0=800, y1=1300, fillcolor="lightcoral", opacity=0.35, line_width=0)
 
-        # Line
         fig.add_trace(go.Scatter(
             x=weekly["Week"],
             y=weekly["Points"],
@@ -173,21 +165,6 @@ def main():
             name="Weekly Severity Total"
         ))
 
-        # Legend entries
-        fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers',
-            marker=dict(size=10, color='green'),
-            name='Low Risk Zone (0–400)'
-        ))
-        fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers',
-            marker=dict(size=10, color='khaki'),
-            name='Medium Risk Zone (401–800)'
-        ))
-        fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers',
-            marker=dict(size=10, color='lightcoral'),
-            name='High Risk Zone (800+)'
-        ))
-
-        # Right annotation box
         fig.add_annotation(
             x=25,
             y=600,
@@ -195,70 +172,66 @@ def main():
                 "25 pt: Property Damage<br><br>"
                 "50 pt: Record Only - No Treatment<br><br>"
                 "75 pt: First Aid<br><br>"
-                "150 pt: Molten Metal Spill > 25 lbs / Explosion<br><br>"
-                "250 pt: Recordable / Restricted Work<br><br>"
+                "150 pt: Molten Metal Spill / Explosion<br><br>"
+                "250 pt: Recordable / Restricted<br><br>"
                 "350 pt: Days Away From Work<br><br>"
                 "600 pt: Fatality"
             ),
             showarrow=False,
-            align="left",
             bordercolor="gray",
             borderwidth=1,
             bgcolor="white"
         )
 
         fig.update_layout(
-            title="Incident Severity Graph",
-            xaxis_title="Calendar Week Number",
-            yaxis_title="Total Accumulated Severity Points",
             xaxis=dict(range=[1, 24], dtick=1),
             yaxis=dict(range=[0, 1250], dtick=200),
-            legend=dict(x=0.01, y=0.98)
+            title="Incident Severity Graph"
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
     # =========================================================
-    # TAB 2 — METRICS
+    # TAB 2 — METRICS (FULL ✅)
     # =========================================================
     with tab2:
 
-        if metrics.empty:
-            st.warning("No metrics data available.")
-            return
+        # =========================
+        # TCIR + DART
+        # =========================
+        if tcir is not None and not tcir.empty:
 
-        st.subheader("📊 TCIR & DART")
+            st.subheader("📊 TCIR & DART Trends")
 
-        # ✅ SAFE COLUMN DETECTION (FIXED ERROR)
-        cols = [str(c).lower() for c in metrics.columns]
+            cols = [str(c).lower() for c in tcir.columns]
 
-        month_col = next((metrics.columns[i] for i, c in enumerate(cols) if "month" in c), None)
-        tcir_col = next((metrics.columns[i] for i, c in enumerate(cols) if "tcir" in c and "actual" in c), None)
-        dart_col = next((metrics.columns[i] for i, c in enumerate(cols) if "dart" in c and "actual" in c), None)
+            month = next((tcir.columns[i] for i, c in enumerate(cols) if "month" in c), None)
+            tcir_actual = next((tcir.columns[i] for i, c in enumerate(cols) if "tcir" in c and "actual" in c), None)
+            dart_actual = next((tcir.columns[i] for i, c in enumerate(cols) if "dart" in c and "actual" in c), None)
 
-        # TCIR
-        if month_col and tcir_col:
-            fig = px.line(
-                metrics,
-                x=month_col,
-                y=tcir_col,
-                markers=True,
-                text=tcir_col
-            )
-            fig.update_traces(textposition="top center")
-            st.plotly_chart(fig, use_container_width=True)
+            if month and tcir_actual:
+                fig = px.line(tcir, x=month, y=tcir_actual, markers=True, text=tcir_actual)
+                fig.update_traces(textposition="top center")
+                st.plotly_chart(fig, use_container_width=True)
 
-        # DART
-        if month_col and dart_col:
-            fig = px.line(
-                metrics,
-                x=month_col,
-                y=dart_col,
-                markers=True,
-                text=dart_col
-            )
-            fig.update_traces(textposition="top center")
-            st.plotly_chart(fig, use_container_width=True)
+            if month and dart_actual:
+                fig = px.line(tcir, x=month, y=dart_actual, markers=True, text=dart_actual)
+                fig.update_traces(textposition="top center")
+                st.plotly_chart(fig, use_container_width=True)
+
+        # =========================
+        # FSI REPORTS ✅
+        # =========================
+        if fsi is not None:
+            st.subheader("📋 FSI Reports")
+            st.dataframe(fsi, use_container_width=True)
+
+        # =========================
+        # CAPA ✅
+        # =========================
+        if capas is not None:
+            st.subheader("🛠️ CAPA Tracking")
+            st.dataframe(capas, use_container_width=True)
 
 
 # =========================
