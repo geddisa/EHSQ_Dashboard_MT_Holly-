@@ -1,177 +1,244 @@
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-# =========================
-# SETTINGS
-# =========================
-st.set_page_config(page_title="EHSQ KPI Dashboard", layout="wide")
+st.set_page_config(page_title="EHSQ Executive Dashboard", layout="wide")
 
 # =========================
 # LOAD DATA
 # =========================
 @st.cache_data
-def load_data(uploaded):
+def load_incidents(uploaded):
     try:
-        if uploaded:
-            df = pd.read_excel(uploaded, engine="openpyxl")
-        else:
-            df = pd.read_excel("IncidentReports_All_MTH_2026-06-18.xlsx", engine="openpyxl")
+        file = uploaded if uploaded else "IncidentReports_All_MTH_2026-06-18.xlsx"
+        df = pd.read_excel(file, engine="openpyxl")
 
-        # Clean columns
         df.columns = df.columns.astype(str).str.strip()
-
-        # Replace problematic values (important for Plotly)
         df = df.replace({pd.NA: None})
 
         return df
 
     except Exception as e:
-        st.error(f"❌ Error loading file: {e}")
+        st.error(f"Error loading incident file: {e}")
         return pd.DataFrame()
 
 
+@st.cache_data
+def load_metrics(uploaded):
+    try:
+        file = uploaded if uploaded else "EHSQ Metrics.xlsx"
+        df = pd.read_excel(file, sheet_name="TCIR and DART", skiprows=2, engine="openpyxl")
+        df.columns = df.columns.astype(str).str.strip()
+        return df
+
+    except:
+        return None
+
+
 # =========================
-# SAFE PLOT FUNCTION
+# SAFE PLOT
 # =========================
-def safe_plot(fig, title="Chart"):
+def safe_plot(fig):
     try:
         st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.warning(f"⚠️ {title} failed to render: {e}")
+    except:
+        st.warning("Chart failed")
 
+# =========================
+# KPI COLOR LOGIC
+# =========================
+def kpi_color(value, good, warning):
+    if value <= good:
+        return "green"
+    elif value <= warning:
+        return "orange"
+    return "red"
 
 # =========================
 # MAIN
 # =========================
 def main():
 
-    st.title("📊 EHSQ Performance Dashboard")
+    st.title("📊 EHSQ Executive Dashboard")
 
-    # Upload
-    uploaded = st.sidebar.file_uploader("Upload Incident File", type=["xlsx"])
+    # Sidebar filters
+    st.sidebar.header("Filters")
+    inc_file = st.sidebar.file_uploader("Incident File", type=["xlsx"])
+    met_file = st.sidebar.file_uploader("Metrics File", type=["xlsx"])
 
-    df = load_data(uploaded)
+    df = load_incidents(inc_file)
+    metrics = load_metrics(met_file)
 
     if df.empty:
-        st.warning("⚠️ No data loaded.")
+        st.warning("No data loaded.")
         return
 
     # =========================
-    # PREPROCESSING
+    # PREPROCESS
     # =========================
-    if "Date of Incident (Local Plant Time)" in df.columns:
-        df["Date"] = pd.to_datetime(
-            df["Date of Incident (Local Plant Time)"],
-            errors="coerce"
-        )
+    df["Date"] = pd.to_datetime(
+        df.get("Date of Incident (Local Plant Time)"), errors="coerce"
+    )
 
-    if "Injury Classification" in df.columns:
-        df["Recordable"] = df["Injury Classification"].isin([
-            "Days Away From Work",
-            "Restricted or Transferred Work",
-            "Other Recordable Case"
-        ])
-    else:
-        df["Recordable"] = False
+    df["High Risk"] = df.get("Risk Level", "").astype(str).str.lower().isin(["high", "major"])
 
-    if "Risk Level" in df.columns:
-        df["High Risk"] = df["Risk Level"].astype(str).str.lower().isin(["high", "major"])
-    else:
-        df["High Risk"] = False
+    df["Recordable"] = df.get("Injury Classification", "").isin([
+        "Days Away From Work",
+        "Restricted or Transferred Work",
+        "Other Recordable Case"
+    ])
 
     # =========================
-    # KPI CARDS
+    # FILTERS (POWER BI STYLE)
     # =========================
-    st.subheader("🚦 Key Performance Indicators")
+    dept_filter = st.sidebar.multiselect(
+        "Department",
+        options=df["Department"].dropna().unique() if "Department" in df.columns else [],
+        default=df["Department"].dropna().unique() if "Department" in df.columns else []
+    )
+
+    if "Department" in df.columns:
+        df = df[df["Department"].isin(dept_filter)]
+
+    # =========================
+    # KPI SECTION
+    # =========================
+    st.subheader("🚦 KPI Overview")
+
+    total_incidents = len(df)
+    severe = df["High Risk"].sum()
+    recordables = df["Recordable"].sum()
 
     c1, c2, c3 = st.columns(3)
 
-    c1.metric("Total Incidents", len(df))
-    c2.metric("Severe Incidents", int(df["High Risk"].sum()))
-    c3.metric("Recordables", int(df["Recordable"].sum()))
+    c1.metric("Total Incidents", total_incidents)
+
+    c2.metric(
+        "Severe Incidents",
+        severe,
+        delta=None
+    )
+
+    c3.metric(
+        "Recordables",
+        recordables,
+        delta=None
+    )
 
     # =========================
-    # INCIDENT TREND (FIXED)
+    # TREND
     # =========================
-    st.subheader("📈 Incidents Over Time")
+    st.subheader("📈 Incident Trend")
 
-    if "Date" in df.columns:
-        trend_df = df.dropna(subset=["Date"]).copy()
+    trend_df = df.dropna(subset=["Date"]).copy()
+    trend_df["Month"] = trend_df["Date"].dt.to_period("M").dt.to_timestamp()
 
-        # ✅ FIX: Convert Period → Timestamp
-        trend_df["Month"] = trend_df["Date"].dt.to_period("M").dt.to_timestamp()
+    trend = trend_df.groupby("Month").size().reset_index(name="Count")
 
-        trend = trend_df.groupby("Month").size().reset_index(name="Count")
+    fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
+    fig.update_traces(textposition="top center")
 
-        if not trend.empty:
-            fig = px.line(trend, x="Month", y="Count", markers=True)
-            safe_plot(fig, "Trend Chart")
+    safe_plot(fig)
 
     # =========================
-    # BREAKDOWNS
+    # SEVERITY (POLISHED)
     # =========================
-    st.subheader("📊 Breakdown Analysis")
+    st.subheader("🔥 Severity Breakdown")
 
-    col1, col2 = st.columns(2)
+    sev = df["Risk Level"].fillna("Unknown").value_counts().reset_index()
+    sev.columns = ["Risk Level", "Count"]
 
-    if "Injury Classification" in df.columns:
-        with col1:
-            fig = px.histogram(df, x="Injury Classification", title="Injury Classification")
-            safe_plot(fig, "Injury Classification")
+    fig = px.bar(
+        sev,
+        x="Risk Level",
+        y="Count",
+        text="Count",
+        color="Risk Level",
+        color_discrete_map={
+            "Low": "green",
+            "Medium": "orange",
+            "High": "red",
+            "Major": "darkred"
+        }
+    )
+    fig.update_traces(textposition="outside")
 
-    if "Hazard Type" in df.columns:
-        with col2:
-            fig = px.histogram(df, x="Hazard Type", title="Hazard Type")
-            safe_plot(fig, "Hazard Type")
-
-    col3, col4 = st.columns(2)
-
-    if "Type" in df.columns:
-        with col3:
-            fig = px.histogram(df, x="Type", title="Incident Type")
-            safe_plot(fig, "Incident Type")
-
-    if "Department" in df.columns:
-        with col4:
-            fig = px.histogram(df, x="Department", title="Department")
-            safe_plot(fig, "Department")
+    safe_plot(fig)
 
     # =========================
-    # TOP RISKS
+    # HAZARDS
     # =========================
-    st.subheader("⚠️ Top Risk Factors")
+    st.subheader("⚠️ Top Hazards")
 
-    if "Risk Factor" in df.columns:
-        risk_df = df["Risk Factor"].fillna("Unknown").value_counts().head(10).reset_index()
-        risk_df.columns = ["Risk Factor", "Count"]
+    hz = df["Hazard Type"].value_counts().head(10).reset_index()
+    hz.columns = ["Hazard", "Count"]
 
-        fig = px.bar(
-            risk_df.sort_values("Count"),
-            x="Count",
-            y="Risk Factor",
-            orientation="h"
-        )
+    fig = px.bar(hz, x="Hazard", y="Count", text="Count")
+    fig.update_traces(textposition="outside")
 
-        safe_plot(fig, "Top Risk Factors")
+    safe_plot(fig)
 
     # =========================
-    # INSIGHTS PANEL
+    # RISKS
     # =========================
-    st.subheader("🧠 Key Insights")
+    st.subheader("🚨 Top Risk Factors")
 
-    st.info("""
-    • High frequency of **Line of Fire, Mobile Equipment, and Heat Stress incidents**
-    • Most injuries affect **hands, fingers, and lower body**
-    • Repeated patterns indicate **systemic hazard exposure**
-    • Environmental risks include **air quality, spills, and chemical events**
-    • Recordable injuries are affecting operational performance (DART impact)
+    risk = df["Risk Factor"].value_counts().head(10).reset_index()
+    risk.columns = ["Risk Factor", "Count"]
+
+    fig = px.bar(
+        risk.sort_values("Count"),
+        x="Count",
+        y="Risk Factor",
+        orientation="h",
+        text="Count"
+    )
+
+    fig.update_traces(textposition="outside")
+
+    safe_plot(fig)
+
+    # =========================
+    # METRICS
+    # =========================
+    if metrics is not None:
+        st.subheader("📊 TCIR & DART")
+
+        month_col = next((c for c in metrics.columns if "month" in c.lower()), None)
+        tcir_actual = next((c for c in metrics.columns if "tcir actual" in c.lower()), None)
+        dart_actual = next((c for c in metrics.columns if "dart actual" in c.lower()), None)
+
+        if month_col and tcir_actual:
+            fig = px.line(metrics, x=month_col, y=tcir_actual, markers=True, text=tcir_actual)
+            fig.update_traces(textposition="top center")
+            safe_plot(fig)
+
+        if month_col and dart_actual:
+            fig = px.line(metrics, x=month_col, y=dart_actual, markers=True, text=dart_actual)
+            fig.update_traces(textposition="top center")
+            safe_plot(fig)
+
+    # =========================
+    # AUTO INSIGHTS ✅
+    # =========================
+    st.subheader("🧠 Executive Insights")
+
+    top_hazard = hz.iloc[0]["Hazard"] if not hz.empty else "N/A"
+    top_risk = risk.iloc[0]["Risk Factor"] if not risk.empty else "N/A"
+
+    st.success(f"""
+    • Most common hazard: **{top_hazard}**  
+    • Highest risk driver: **{top_risk}**  
+    • Severe incidents: **{severe}** (focus needed on high-risk controls)  
+    • Repetitive patterns indicate **systemic exposure risks**  
+    • Recommend focus on **mobile equipment, heat exposure, and pinch points**
     """)
 
     # =========================
-    # FULL TABLE
+    # TABLE
     # =========================
-    st.subheader("📋 Full Incident Data")
+    st.subheader("📋 Full Data")
 
     st.dataframe(df, use_container_width=True)
 
