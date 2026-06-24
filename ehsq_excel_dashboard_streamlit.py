@@ -6,34 +6,51 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
 
 # =========================
-# LOAD DATA
+# LOAD INCIDENT DATA
 # =========================
 @st.cache_data
 def load_incidents(uploaded):
     try:
         file = uploaded if uploaded else "IncidentReports_All_MTH_2026-06-18.xlsx"
         df = pd.read_excel(file, engine="openpyxl")
-        df.columns = df.columns.str.strip()
+
+        df.columns = [str(c).strip() for c in df.columns]
         df = df.replace({pd.NA: None})
+
         return df
+
     except Exception as e:
         st.error(f"Error loading incidents: {e}")
         return pd.DataFrame()
 
 
+# =========================
+# LOAD METRICS DATA
+# =========================
 @st.cache_data
 def load_metrics(uploaded):
     try:
         file = uploaded if uploaded else "EHSQ Metrics.xlsx"
-        df = pd.read_excel(file, sheet_name="TCIR and DART", skiprows=2, engine="openpyxl")
-        df.columns = df.columns.str.strip()
+
+        df = pd.read_excel(
+            file,
+            sheet_name="TCIR and DART",
+            skiprows=2,
+            engine="openpyxl"
+        )
+
+        # ✅ FIX: force all columns to string
+        df.columns = [str(c).strip() for c in df.columns]
+
         return df
-    except:
-        return None
+
+    except Exception as e:
+        st.warning(f"Metrics load failed: {e}")
+        return pd.DataFrame()
 
 
 # =========================
-# MAIN
+# MAIN APP
 # =========================
 def main():
 
@@ -84,7 +101,7 @@ def main():
     tab1, tab2 = st.tabs(["🚨 Incident Dashboard", "📈 Metrics Dashboard"])
 
     # =========================================================
-    # TAB 1 — INCIDENT DASHBOARD
+    # TAB 1 — INCIDENT
     # =========================================================
     with tab1:
 
@@ -103,14 +120,16 @@ def main():
 
         trend_df = df.dropna(subset=["Date"]).copy()
         trend_df["Month"] = trend_df["Date"].dt.to_period("M").dt.to_timestamp()
+
         trend = trend_df.groupby("Month").size().reset_index(name="Count")
 
-        fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
-        fig.update_traces(textposition="top center")
-        st.plotly_chart(fig, use_container_width=True)
+        if not trend.empty:
+            fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
+            fig.update_traces(textposition="top center")
+            st.plotly_chart(fig, use_container_width=True)
 
         # =========================
-        # ✅ SEVERITY GRAPH (EXACT MATCH)
+        # ✅ SEVERITY GRAPH (MATCHED)
         # =========================
         st.subheader("🔥 Incident Severity Graph")
 
@@ -131,20 +150,20 @@ def main():
             .fillna(0)
 
         df["Week"] = df["Date"].dt.isocalendar().week
+
         weekly = df.groupby("Week")["Points"].sum().reset_index()
 
-        # ensure 1–24 weeks
-        all_weeks = pd.DataFrame({"Week": range(1, 25)})
-        weekly = all_weeks.merge(weekly, on="Week", how="left").fillna(0)
+        full_weeks = pd.DataFrame({"Week": range(1, 25)})
+        weekly = full_weeks.merge(weekly, on="Week", how="left").fillna(0)
 
         fig = go.Figure()
 
-        # BACKGROUND ZONES (MATCH IMAGE)
+        # Background zones
         fig.add_hrect(y0=0, y1=400, fillcolor="green", opacity=0.25, line_width=0)
         fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.35, line_width=0)
         fig.add_hrect(y0=800, y1=1300, fillcolor="lightcoral", opacity=0.35, line_width=0)
 
-        # LINE
+        # Line
         fig.add_trace(go.Scatter(
             x=weekly["Week"],
             y=weekly["Points"],
@@ -154,23 +173,21 @@ def main():
             name="Weekly Severity Total"
         ))
 
-        # LEGEND ITEMS
+        # Legend entries
         fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers',
             marker=dict(size=10, color='green'),
             name='Low Risk Zone (0–400)'
         ))
-
         fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers',
             marker=dict(size=10, color='khaki'),
             name='Medium Risk Zone (401–800)'
         ))
-
         fig.add_trace(go.Scatter(x=[None], y=[None], mode='markers',
             marker=dict(size=10, color='lightcoral'),
             name='High Risk Zone (800+)'
         ))
 
-        # RIGHT SIDE BOX
+        # Right annotation box
         fig.add_annotation(
             x=25,
             y=600,
@@ -179,7 +196,7 @@ def main():
                 "50 pt: Record Only - No Treatment<br><br>"
                 "75 pt: First Aid<br><br>"
                 "150 pt: Molten Metal Spill > 25 lbs / Explosion<br><br>"
-                "250 pt: Recordable / Restricted<br><br>"
+                "250 pt: Recordable / Restricted Work<br><br>"
                 "350 pt: Days Away From Work<br><br>"
                 "600 pt: Fatality"
             ),
@@ -201,41 +218,45 @@ def main():
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # =========================
-        # HAZARDS
-        # =========================
-        st.subheader("⚠️ Top Hazards")
-
-        hz = df["Hazard Type"].value_counts().head(10).reset_index()
-        hz.columns = ["Hazard", "Count"]
-
-        fig = px.bar(hz, x="Hazard", y="Count", text="Count")
-        fig.update_traces(textposition="outside")
-
-        st.plotly_chart(fig, use_container_width=True)
-
     # =========================================================
     # TAB 2 — METRICS
     # =========================================================
     with tab2:
 
-        if metrics is None:
-            st.warning("No metrics file loaded")
+        if metrics.empty:
+            st.warning("No metrics data available.")
             return
 
         st.subheader("📊 TCIR & DART")
 
-        month_col = next((c for c in metrics.columns if "month" in c.lower()), None)
-        tcir = next((c for c in metrics.columns if "tcir actual" in c.lower()), None)
-        dart = next((c for c in metrics.columns if "dart actual" in c.lower()), None)
+        # ✅ SAFE COLUMN DETECTION (FIXED ERROR)
+        cols = [str(c).lower() for c in metrics.columns]
 
-        if month_col and tcir:
-            fig = px.line(metrics, x=month_col, y=tcir, markers=True, text=tcir)
+        month_col = next((metrics.columns[i] for i, c in enumerate(cols) if "month" in c), None)
+        tcir_col = next((metrics.columns[i] for i, c in enumerate(cols) if "tcir" in c and "actual" in c), None)
+        dart_col = next((metrics.columns[i] for i, c in enumerate(cols) if "dart" in c and "actual" in c), None)
+
+        # TCIR
+        if month_col and tcir_col:
+            fig = px.line(
+                metrics,
+                x=month_col,
+                y=tcir_col,
+                markers=True,
+                text=tcir_col
+            )
             fig.update_traces(textposition="top center")
             st.plotly_chart(fig, use_container_width=True)
 
-        if month_col and dart:
-            fig = px.line(metrics, x=month_col, y=dart, markers=True, text=dart)
+        # DART
+        if month_col and dart_col:
+            fig = px.line(
+                metrics,
+                x=month_col,
+                y=dart_col,
+                markers=True,
+                text=dart_col
+            )
             fig.update_traces(textposition="top center")
             st.plotly_chart(fig, use_container_width=True)
 
