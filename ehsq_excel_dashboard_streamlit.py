@@ -7,16 +7,12 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide")
 
 # =========================================
-# LOAD DATA
+# LOAD DATA (NO UPLOADS)
 # =========================================
-def load_data(inc_file, metrics_file):
+def load_data():
 
-    if inc_file is None or metrics_file is None:
-        st.warning("Upload required files")
-        st.stop()
-
-    inc = pd.read_excel(inc_file)
-    metrics = pd.read_excel(metrics_file, sheet_name=None)
+    inc = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx")
+    metrics = pd.read_excel("EHSQ Metrics.xlsx", sheet_name=None)
 
     inc.columns = inc.columns.str.strip()
 
@@ -28,13 +24,14 @@ def load_data(inc_file, metrics_file):
 
 
 # =========================================
-# SEVERITY
+# SEVERITY CHART
 # =========================================
 def severity_chart(df):
 
     mapping = {
         'Property Damage': 25,
         'Record Only-No Treatment': 50,
+        'Record Only - No Treatment': 50,
         'First Aid': 75,
         'Other Recordable Case': 250,
         'Restricted or Transferred Work': 250,
@@ -49,12 +46,17 @@ def severity_chart(df):
 
     fig = go.Figure()
 
-    fig.add_hrect(y0=0, y1=400, fillcolor="lightgreen", opacity=0.4)
-    fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.4)
-    fig.add_hrect(y0=800, y1=1500, fillcolor="lightcoral", opacity=0.4)
+    fig.add_hrect(y0=0, y1=400, fillcolor="lightgreen", opacity=0.3)
+    fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.3)
+    fig.add_hrect(y0=800, y1=1500, fillcolor="lightcoral", opacity=0.3)
 
     fig.add_trace(
-        go.Scatter(x=weekly["Week"], y=weekly["Points"], mode="lines+markers")
+        go.Scatter(
+            x=weekly["Week"],
+            y=weekly["Points"],
+            mode="lines+markers",
+            name="Severity"
+        )
     )
 
     fig.update_layout(title="Severity Trend")
@@ -78,7 +80,8 @@ def tcir_chart(metrics):
 
     fig.add_trace(go.Scatter(
         x=df["Month"], y=df["TCIR Target"],
-        name="TCIR Target", line=dict(dash="dash")
+        name="TCIR Target",
+        line=dict(dash="dash")
     ))
 
     fig.add_trace(go.Scatter(
@@ -88,7 +91,8 @@ def tcir_chart(metrics):
 
     fig.add_trace(go.Scatter(
         x=df["Month"], y=df["DART Target"],
-        name="DART Target", line=dict(dash="dash")
+        name="DART Target",
+        line=dict(dash="dash")
     ))
 
     fig.update_layout(title="TCIR & DART Trend")
@@ -97,31 +101,28 @@ def tcir_chart(metrics):
 
 
 # =========================================
-# MAIN
+# MAIN APP
 # =========================================
 def main():
 
     st.title("📊 EHSQ EXECUTIVE DASHBOARD")
 
-    # Uploads
-    inc_file = st.sidebar.file_uploader("Incident Report File", type=["xlsx"])
-    metrics_file = st.sidebar.file_uploader("EHSQ Metrics File", type=["xlsx"])
-
-    inc, metrics = load_data(inc_file, metrics_file)
+    # ✅ AUTO LOAD FILES
+    inc, metrics = load_data()
 
     # =========================================
-    # 🔥 EXEC KPIs
+    # KPI SECTION
     # =========================================
     st.subheader("Executive KPIs")
 
     total_inc = len(inc)
 
     severe = inc["Injury Classification"].astype(str).str.contains(
-        "Days Away|Fatality"
+        "Days Away|Fatality", case=False
     ).sum()
 
     recordable = inc["Injury Classification"].astype(str).str.contains(
-        "Recordable|Days Away"
+        "Recordable|Days Away", case=False
     ).sum()
 
     c1, c2, c3 = st.columns(3)
@@ -130,58 +131,80 @@ def main():
     c3.metric("Recordables", recordable)
 
     # =========================================
-    # 🔥 INCIDENT TREND
+    # INCIDENT TREND
     # =========================================
     st.subheader("Incident Trend")
 
-    trend = inc.groupby(inc["Date"].dt.to_period("M")).size().reset_index(name="Count")
+    trend = inc.groupby(
+        inc["Date"].dt.to_period("M")
+    ).size().reset_index(name="Count")
+
     trend["Date"] = trend["Date"].dt.to_timestamp()
 
-    st.plotly_chart(px.line(trend, x="Date", y="Count"), use_container_width=True)
+    st.plotly_chart(
+        px.line(trend, x="Date", y="Count"),
+        use_container_width=True
+    )
 
     # =========================================
-    # 🔥 CLASSIFICATION
+    # INJURY CLASSIFICATION
     # =========================================
     st.subheader("Injury Classification")
 
     class_df = inc["Injury Classification"].value_counts().reset_index()
     class_df.columns = ["Type", "Count"]
 
-    st.plotly_chart(px.bar(class_df, x="Type", y="Count"), use_container_width=True)
+    st.plotly_chart(
+        px.bar(class_df, x="Type", y="Count"),
+        use_container_width=True
+    )
 
     # =========================================
-    # 🔥 HAZARD TYPE
+    # HAZARD TYPE
     # =========================================
     st.subheader("Hazard Type")
 
     haz_df = inc["Hazard Type"].value_counts().reset_index()
     haz_df.columns = ["Hazard", "Count"]
 
-    st.plotly_chart(px.bar(haz_df, x="Hazard", y="Count"), use_container_width=True)
+    st.plotly_chart(
+        px.bar(haz_df, x="Hazard", y="Count"),
+        use_container_width=True
+    )
 
     # =========================================
-    # 🔥 DEPARTMENT
+    # DEPARTMENT BREAKDOWN
     # =========================================
     st.subheader("Department Breakdown")
 
     dept_df = inc["Department"].value_counts().reset_index()
     dept_df.columns = ["Dept", "Count"]
 
-    st.plotly_chart(px.bar(dept_df, x="Dept", y="Count"), use_container_width=True)
+    st.plotly_chart(
+        px.bar(dept_df, x="Dept", y="Count"),
+        use_container_width=True
+    )
 
     # =========================================
-    # 🔥 SEVERITY
+    # SEVERITY
     # =========================================
-    st.plotly_chart(severity_chart(inc), use_container_width=True)
+    st.plotly_chart(
+        severity_chart(inc),
+        use_container_width=True
+    )
 
     # =========================================
-    # 🔥 TCIR / DART
+    # TCIR / DART
     # =========================================
     st.subheader("TCIR & DART Performance")
-    st.plotly_chart(tcir_chart(metrics), use_container_width=True)
+
+    st.plotly_chart(
+        tcir_chart(metrics),
+        use_container_width=True
+    )
 
     # =========================================
-    # 🔥 CAPA PERFORMANCE
+    # CAPA PERFORMANCE
     # =========================================
     st.subheader("CAPA Performance")
 
@@ -189,14 +212,14 @@ def main():
 
     if "% On Time" in capa.columns:
         st.plotly_chart(
-            px.line(capa, x="CAPAs", y="% On Time", title="CAPA On-Time Performance"),
+            px.line(capa, x="CAPAs", y="% On Time"),
             use_container_width=True
         )
 
     # =========================================
-    # 🔥 FSI REPORT PERFORMANCE
+    # FSI PERFORMANCE
     # =========================================
-    st.subheader("FSI Performance")
+    st.subheader("FSI Reports Performance")
 
     fsi = metrics["FSI Reports"]
 
@@ -207,6 +230,6 @@ def main():
         )
 
 
-# RUN
+# RUN APP
 if __name__ == "__main__":
     main()
