@@ -177,32 +177,86 @@ def main():
         st.plotly_chart(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ================= FSI =================
+      
+        # ================= FSI (FIXED ✅) =================
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("FSI Reports")
 
-        fig = px.bar(fsi, x="FSI Reports", y=["On Time","Over Due"], barmode="group")
-        st.plotly_chart(fig, use_container_width=True)
+        # ✅ CLEAN THE DATA
+        fsi_clean = fsi.copy()
 
-        fig = px.line(fsi, x="FSI Reports", y="% On Time", markers=True)
-        fig.add_hline(y=1, line_dash="dash")
-        st.plotly_chart(fig, use_container_width=True)
+        # Drop empty rows
+        fsi_clean = fsi_clean.dropna(how="all")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Rename columns safely
+        fsi_clean.columns = [str(c).strip() for c in fsi_clean.columns]
 
-        # ================= CAPA =================
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("CAPAs")
+        # ✅ FIND REAL COLUMN NAMES
+        col_month = fsi_clean.columns[0]
+        col_ontime = next((c for c in fsi_clean.columns if "on time" in c.lower() and "%" not in c.lower()), None)
+        col_overdue = next((c for c in fsi_clean.columns if "over" in c.lower()), None)
+        col_percent = next((c for c in fsi_clean.columns if "%" in c.lower()), None)
 
-        fig = px.bar(capas, x="CAPAs", y=["On Time","Over Due"], barmode="group")
-        st.plotly_chart(fig, use_container_width=True)
+        # ✅ BAR CHART (ONLY IF FOUND)
+        if col_ontime and col_overdue:
+            fig = px.bar(
+            fsi_clean,
+            x=col_month,
+            y=[col_ontime, col_overdue],
+            barmode="group"
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-        fig = px.line(capas, x="CAPAs", y="% On Time", markers=True)
-        fig.add_hline(y=0.8, line_dash="dash")
-        st.plotly_chart(fig, use_container_width=True)
+# ✅ % LINE
+if col_percent:
+    fig = px.line(
+        fsi_clean,
+        x=col_month,
+        y=col_percent,
+        markers=True
+    )
 
-        st.markdown('</div>', unsafe_allow_html=True)
+    fig.add_hline(y=1, line_dash="dash", line_color="green")
+    st.plotly_chart(fig, use_container_width=True)
 
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+      # ================= CAPA (FIXED ✅) =================
+st.markdown('<div class="card">', unsafe_allow_html=True)
+st.subheader("CAPAs")
+
+capas_clean = capas.copy()
+capas_clean = capas_clean.dropna(how="all")
+
+capas_clean.columns = [str(c).strip() for c in capas_clean.columns]
+
+col_month = capas_clean.columns[0]
+col_ontime = next((c for c in capas_clean.columns if "on time" in c.lower() and "%" not in c.lower()), None)
+col_overdue = next((c for c in capas_clean.columns if "over" in c.lower()), None)
+col_percent = next((c for c in capas_clean.columns if "%" in c.lower()), None)
+
+if col_ontime and col_overdue:
+    fig = px.bar(
+        capas_clean,
+        x=col_month,
+        y=[col_ontime, col_overdue],
+        barmode="group"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+if col_percent:
+    fig = px.line(
+        capas_clean,
+        x=col_month,
+        y=col_percent,
+        markers=True
+    )
+
+    fig.add_hline(y=0.8, line_dash="dash", line_color="red")
+    st.plotly_chart(fig, use_container_width=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # RUN
 if __name__ == "__main__":
