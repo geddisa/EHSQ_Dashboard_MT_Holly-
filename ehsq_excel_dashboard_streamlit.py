@@ -2,27 +2,26 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Page Configuration
-st.set_page_config(page_title="EHSQ Performance Dashboard", layout="wide")
+st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
-# 2. Data Loading
+# 1. Load Data
 @st.cache_data
-def load_all_data():
-    # Load Incident Report
-    df_incidents = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx", sheet_name="Sheet1")
+def load_data():
+    # Load your Incident Data
+    df = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx", sheet_name="Sheet1")
     
-    # Load Metrics Master File
+    # Load Metrics with skiprows to ignore the title/extra rows in the Excel file
     metrics_file = "EHSQ Metrics.xlsx"
-    tcir_dart = pd.read_excel(metrics_file, sheet_name="TCIR and DART")
-    housekeeping = pd.read_excel(metrics_file, sheet_name="Housekeeping", skiprows=1)
-    capas = pd.read_excel(metrics_file, sheet_name="CAPAs", skiprows=1)
+    tcir = pd.read_excel(metrics_file, sheet_name="TCIR and DART", header=1)
+    house = pd.read_excel(metrics_file, sheet_name="Housekeeping", skiprows=2)
+    capa = pd.read_excel(metrics_file, sheet_name="CAPAs", skiprows=2)
     
-    return df_incidents, tcir_dart, housekeeping, capas
+    return df, tcir, house, capa
 
-df, tcir_dart, housekeeping, capas = load_all_data()
+df, tcir_df, house_df, capa_df = load_data()
 
-# 3. Risk Mitigation Tracker (4-Box)
+# 2. Risk Mitigation Tracker (Using Incident Data)
 st.subheader("Risk Mitigation Tracker")
 def map_risk(status):
     if status in ['Completed On Time', 'Completed Late']: return 'Completed'
@@ -41,22 +40,21 @@ c4.metric("Need Info", counts.get("Need More Information", 0))
 
 st.divider()
 
-# 4. Charts Section
-col_left, col_right = st.columns(2)
+# 3. Charts
+col1, col2 = st.columns(2)
 
-with col_left:
+with col1:
     st.subheader("TCIR & DART Trends")
-    fig1 = px.line(tcir_dart, x='Month', y=['TCIR Actual', 'DART Actual'], markers=True)
+    fig1 = px.line(tcir_df, x='Month', y=['TCIR Actual', 'DART Actual'], markers=True)
     fig1.update_traces(texttemplate='%{y:.2f}', textposition='top center')
     st.plotly_chart(fig1, use_container_width=True)
 
-with col_right:
-    st.subheader("Housekeeping Performance")
-    fig2 = px.line(housekeeping, x='Unnamed: 0', y='Average Plant Score', markers=True)
+with col2:
+    st.subheader("Housekeeping Scores")
+    fig2 = px.line(house_df, x='Unnamed: 0', y='Average Plant Score', markers=True)
     fig2.update_traces(texttemplate='%{y:.2f}', textposition='top center')
     st.plotly_chart(fig2, use_container_width=True)
 
-# 5. Raw Data Preview
 st.divider()
 st.subheader("Incident Details")
 st.dataframe(df, use_container_width=True)
