@@ -1,68 +1,66 @@
+import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+import glob
 
-# File name
-file_name = "Incidents_Log.xlsx"
+# Page Configuration
+st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
 
-# Define your incident fields here
-columns = [
-    "Date",
-    "Time",
-    "Location",
-    "Incident Type",
-    "Description",
-    "Reported By"
-]
+st.title("EHSQ Management Dashboard")
 
-# Check if file exists
-if os.path.exists(file_name):
-    df = pd.read_excel(file_name, engine="openpyxl")
-else:
-    df = pd.DataFrame(columns=columns)
+# 1. Automatic Data Loader
+def get_latest_file(folder, pattern):
+    list_of_files = glob.glob(f"{folder}/{pattern}")
+    return max(list_of_files, key=os.path.getctime)
 
-print("=== Incident Entry System ===")
-print("Type 'exit' anytime to stop.\n")
+@st.cache_data
+def load_data():
+    incident_file = get_latest_file("data", "IncidentReports_*.xlsx")
+    metrics_file = "data/EHSQ Metrics.xlsx"
+    
+    df_incidents = pd.read_excel(incident_file)
+    df_metrics = pd.read_excel(metrics_file, sheet_name=0)
+    return df_incidents, df_metrics
 
-while True:
-    # Input fields
-    location = input("Enter Location: ")
-    if location.lower() == "exit":
-        break
+df, metrics = load_data()
 
-    incident_type = input("Enter Incident Type: ")
-    if incident_type.lower() == "exit":
-        break
+# 2. Risk Mitigation Tracker Logic
+def get_tracker_counts(df):
+    def categorize(status):
+        if status in ['Completed On Time', 'Completed Late']: return 'Completed'
+        if status in ['In Draft', 'In Review']: return 'In Progress'
+        if status == 'Resolved in Place': return 'Resolved in Place'
+        if status == 'Need More Information': return 'Need More Information'
+        return 'Other'
 
-    description = input("Enter Description: ")
-    if description.lower() == "exit":
-        break
-
-    reported_by = input("Enter Reported By: ")
-    if reported_by.lower() == "exit":
-        break
-
-    # Auto date/time
-    now = datetime.now()
-    date = now.strftime("%Y-%m-%d")
-    time = now.strftime("%H:%M:%S")
-
-    # Create new row
-    new_row = {
-        "Date": date,
-        "Time": time,
-        "Location": location,
-        "Incident Type": incident_type,
-        "Description": description,
-        "Reported By": reported_by
+    df['Cat'] = df['Status'].apply(categorize)
+    counts = df['Cat'].value_counts()
+    
+    return {
+        "Completed": counts.get("Completed", 0),
+        "In Progress": counts.get("In Progress", 0),
+        "Resolved in Place": counts.get("Resolved in Place", 0),
+        "Need More Information": counts.get("Need More Information", 0)
     }
 
-    # Append to dataframe
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+# Display Risk Mitigation Tracker
+st.subheader("Risk Mitigation Tracker")
+counts = get_tracker_counts(df)
 
-    # Save file
-    df.to_excel(file_name, index=False, engine="openpyxl")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Completed", counts["Completed"])
+col2.metric("In Progress", counts["In Progress"])
+col3.metric("Resolved in Place", counts["Resolved in Place"])
+col4.metric("Need More Info", counts["Need More Information"])
 
-    print("\n✅ Incident saved successfully!\n")
+# 3. Data Tables & Visualization
+st.divider()
+tab1, tab2 = st.tabs(["Incident Overview", "EHSQ Metrics"])
 
-print("\nSystem closed.")
+with tab1:
+    st.subheader("Recent Incident Data")
+    st.dataframe(df, use_container_width=True)
+
+with tab2:
+    st.subheader("Metric Performance")
+    st.dataframe(metrics, use_container_width=True)
