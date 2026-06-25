@@ -227,19 +227,152 @@ def main():
     # ==========================================================
     # METRICS DASHBOARD
     # ==========================================================
-    with tab2:
+  
+with tab2:
 
-        st.subheader("TCIR & DART")
+    st.header("📈 EHSQ Metrics Dashboard")
 
-        cols = [str(c).lower() for c in tcir.columns]
+    # ======================================================
+    # ✅ TCIR & DART (ACTUAL vs TARGET vs INDUSTRY)
+    # ======================================================
+    st.subheader("📊 TCIR & DART Performance")
 
-        month = next((tcir.columns[i] for i,c in enumerate(cols) if "month" in c), None)
-        tcir_col = next((tcir.columns[i] for i,c in enumerate(cols) if "tcir" in c and "actual" in c), None)
+    tcir_df = tcir.copy()
 
-        if month and tcir_col:
-            fig = px.line(tcir, x=month, y=tcir_col, markers=True, text=tcir_col)
-            fig.update_traces(textposition="top center")
-            st.plotly_chart(fig, use_container_width=True)
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=tcir_df["Month"],
+        y=tcir_df["TCIR Actual"],
+        mode='lines+markers',
+        name="TCIR Actual",
+        line=dict(color="blue", width=3)
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=tcir_df["Month"],
+        y=tcir_df["TCIR Target"],
+        mode='lines',
+        name="TCIR Target",
+        line=dict(color="green", dash="dash")
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=tcir_df["Month"],
+        y=tcir_df["TCIR Industry Average"],
+        mode='lines',
+        name="Industry Avg",
+        line=dict(color="red", dash="dot")
+    ))
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ================= DART =================
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=tcir_df["Month"],
+        y=tcir_df["DART Actual"],
+        mode='lines+markers',
+        name="DART Actual",
+        line=dict(color="blue", width=3)
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=tcir_df["Month"],
+        y=tcir_df["DART Target"],
+        mode='lines',
+        name="DART Target",
+        line=dict(color="green", dash="dash")
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=tcir_df["Month"],
+        y=tcir_df["DART Industry Average"],
+        mode='lines',
+        name="Industry Avg",
+        line=dict(color="red", dash="dot")
+    ))
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ======================================================
+    # ✅ FSI REPORTS (KEY KPI CHART)
+    # ======================================================
+    st.subheader("📋 FSI Reports Performance")
+
+    fsi_chart = fsi[["FSI Reports", "On Time", "Over Due"]].dropna()
+
+    fig = px.bar(
+        fsi_chart,
+        x="FSI Reports",
+        y=["On Time", "Over Due"],
+        barmode="group",
+        title="FSI On Time vs Overdue"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # % ON TIME LINE
+    if "% On Time" in fsi.columns:
+        fig = px.line(
+            fsi,
+            x="FSI Reports",
+            y="% On Time",
+            markers=True,
+            title="FSI % On Time vs Target"
+        )
+
+        fig.add_hline(y=1, line_dash="dash", line_color="green")  # target = 100%
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ======================================================
+    # ✅ CAPAs (MOST IMPORTANT BUSINESS KPI)
+    # ======================================================
+    st.subheader("🛠️ CAPA Performance")
+
+    capa_chart = capas[["CAPAs", "On Time", "Over Due"]].dropna()
+
+    fig = px.bar(
+        capa_chart,
+        x="CAPAs",
+        y=["On Time", "Over Due"],
+        barmode="group",
+        title="CAPAs On Time vs Overdue"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # CAPA % LINE
+    if "% On Time" in capas.columns:
+        fig = px.line(
+            capas,
+            x="CAPAs",
+            y="% On Time",
+            markers=True,
+            title="CAPA % On Time vs Target"
+        )
+
+        fig.add_hline(y=0.8, line_dash="dash", line_color="red")  # 80% target
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ======================================================
+    # ✅ HOUSEKEEPING
+    # ======================================================
+    st.subheader("🧹 Housekeeping")
+
+    hk = metrics_housekeeping = load_metrics(met_file)[0] if False else None
+    
+# ------------------------------------------------------
+    # SAFE OBSERVATIONS
+    # ------------------------------------------------------
+    st.subheader("✅ Safe Observations")
+
+    safe_cols = [c for c in fsi.columns]  # fallback safe
+
+    # real dataset fix
+    safe = load_metrics(met_file)[1] if False else None
+
 
 
 # RUN
