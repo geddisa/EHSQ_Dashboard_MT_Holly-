@@ -75,55 +75,138 @@ def main():
         # =========================================
         # SEVERITY (EXACT LOOK)
         # =========================================
-        st.subheader("🔥 Severity")
+       
+st.subheader("🔥 Incident Severity Graph")
 
-        severity_mapping = {
-            'Property Damage': 25,
-            'Record Only-No Treatment': 50,
-            'First Aid': 75,
-            'Molten Metal Spill': 150,
-            'Molten Metal Explosion': 150,
-            'Other Recordable Case': 250,
-            'Restricted or Transferred Work': 250,
-            'Days Away From Work': 350,
-            'Recordable - Fatality': 600
-        }
+import plotly.graph_objects as go
 
-        df["Points"] = df["Injury Classification"].map(severity_mapping)\
-            .fillna(df["Type"].map(severity_mapping))\
-            .fillna(0)
+# =========================
+# EXACT SAME MAPPING
+# =========================
+severity_mapping = {
+    'Property Damage': 25,
+    'Record Only - No Treatment': 50,
+    'First Aid': 75,
+    'Molten Metal Spill > 25 lbs': 150,
+    'Molten Metal Explosion (Force 2 or 3)': 150,
+    'Other Recordable Case': 250,
+    'Restricted or Transferred Work': 250,
+    'Days Away From Work': 350,
+    'Recordable - Fatality': 600
+}
 
-        df["Week"] = df["Date"].dt.isocalendar().week
-        weekly = df.groupby("Week")["Points"].sum().reset_index()
+# =========================
+# EXACT SAME POINT LOGIC
+# =========================
+df["Points"] = (
+    df["Injury Classification"].map(severity_mapping)
+    .fillna(df["Type"].map(severity_mapping))
+    .fillna(0)
+)
 
-        weekly = pd.DataFrame({"Week": range(1,25)}).merge(weekly, on="Week", how="left").fillna(0)
+# =========================
+# WEEK CALCULATION (MATCH YOUR CODE)
+# =========================
+df["Week"] = df["Date"].dt.isocalendar().week
 
-        fig = go.Figure()
-        fig.add_hrect(y0=0, y1=400, fillcolor="green", opacity=0.25)
-        fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.35)
-        fig.add_hrect(y0=800, y1=1300, fillcolor="lightcoral", opacity=0.35)
+weekly_scores = df.groupby("Week")["Points"].sum()
 
-        fig.add_trace(go.Scatter(
-            x=weekly["Week"],
-            y=weekly["Points"],
-            mode="lines+markers",
-            line=dict(color="black", width=4),
-            marker=dict(color="black", size=8)
-        ))
+# EXACT same week cap logic
+current_week = 24
+weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
 
-        fig.update_layout(xaxis=dict(dtick=1, range=[1,24]),
-                          yaxis=dict(dtick=200, range=[0,1250]))
+# Convert to dataframe
+weekly = weekly_scores.reset_index()
+weekly.columns = ["Week", "Points"]
 
-        st.plotly_chart(fig, use_container_width=True)
+# =========================
+# BUILD GRAPH (STRUCTURE MATCH)
+# =========================
+fig = go.Figure()
 
-        # Hazards
-        if "Hazard Type" in df.columns:
-            hz = df["Hazard Type"].value_counts().head(10).reset_index()
-            hz.columns = ["Hazard","Count"]
+# ZONES (same thresholds)
+fig.add_hrect(y0=0, y1=400, fillcolor='lightgreen', opacity=0.4, line_width=0)
+fig.add_hrect(y0=400, y1=800, fillcolor='khaki', opacity=0.4, line_width=0)
+fig.add_hrect(y0=800, y1=1250, fillcolor='lightcoral', opacity=0.4, line_width=0)
 
-            fig = px.bar(hz, x="Hazard", y="Count", text="Count")
-            fig.update_traces(textposition="outside")
-            st.plotly_chart(fig, use_container_width=True)
+# LINE (same style)
+fig.add_trace(go.Scatter(
+    x=weekly["Week"],
+    y=weekly["Points"],
+    mode="lines+markers",
+    line=dict(color="black", width=3),
+    marker=dict(color="black", size=8),
+    name="Weekly Severity Total"
+))
+
+# =========================
+# LEGEND MATCH
+# =========================
+fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+    marker=dict(size=10, color="lightgreen"),
+    name="Low Risk Zone (0-400)"
+))
+fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+    marker=dict(size=10, color="khaki"),
+    name="Medium Risk Zone (401-800)"
+))
+fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+    marker=dict(size=10, color="lightcoral"),
+    name="High Risk Zone (800+)"
+))
+
+# =========================
+# EXACT TEXT BOX (RIGHT SIDE)
+# =========================
+fig.add_annotation(
+    x=current_week + 3,
+    y=600,
+    xref="x",
+    yref="y",
+    showarrow=False,
+    align="left",
+    bordercolor="#cccccc",
+    borderwidth=1,
+    bgcolor="white",
+    text=(
+        "25 pt: Property Damage<br><br>"
+        "50 pt: Record Only - No Treatment<br><br>"
+        "75 pt: First Aid<br><br>"
+        "150 pt: Molten Metal Spill > 25 lbs /<br>"
+        "&nbsp;&nbsp;&nbsp;&nbsp;Molten Metal Explosion (Force 2 or 3)<br><br>"
+        "250 pt: Other Recordable Case /<br>"
+        "&nbsp;&nbsp;&nbsp;&nbsp;Restricted or Transferred Work<br><br>"
+        "350 pt: Days Away From Work<br><br>"
+        "600 pt: Recordable - Fatality"
+    )
+)
+
+# =========================
+# AXES + LIMITS (MATCH IMAGE)
+# =========================
+fig.update_layout(
+    title="Incident Severity Graph",
+    xaxis=dict(
+        title="Calendar Week Number",
+        dtick=1,
+        range=[1, current_week + 6]
+    ),
+    yaxis=dict(
+        title="Total Accumulated Severity Points",
+        range=[0, 1250],
+        dtick=200
+    ),
+    plot_bgcolor="white",
+    legend=dict(
+        x=0.01,
+        y=0.98,
+        bgcolor="rgba(255,255,255,1)",
+        bordercolor="#cccccc",
+        borderwidth=1
+    )
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
     # ======================================================
     # METRICS TAB (ALL CHARTS)
