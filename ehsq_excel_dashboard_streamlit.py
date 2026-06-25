@@ -2,54 +2,67 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(layout="wide")
+# 1. Page Setup
+st.set_page_config(page_title="EHSQ Performance Dashboard", layout="wide")
 st.title("EHSQ Performance Dashboard")
 
-# Load your data
+# 2. Data Loading
 @st.cache_data
 def load_data():
     df = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx")
-    return df
+    metrics = pd.read_excel("EHSQ Metrics.xlsx", sheet_name="TCIR and DART")
+    return df, metrics
 
-df = load_data()
+df, metrics = load_data()
 
-# --- 1. Top Level Metrics ---
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Incidents", len(df))
-col2.metric("Severe Incidents", len(df[df['Risk Level'] == 'High'])) # Adjust column/filter as needed
-col3.metric("Total Recordables", len(df[df['Injury Classification'] != 'No Data']))
+# 3. Top Level KPIs
+c1, c2, c3 = st.columns(3)
+c1.metric("Total Incidents", len(df))
+c2.metric("Severe Incidents", len(df[df['Risk Level'] == 'High']))
+c3.metric("Total Recordables", len(df[df['Injury Classification'] != 'No Data']))
 
-# --- 2. Risk Mitigation Tracker (The 4-Box requirement) ---
+st.divider()
+
+# 4. Risk Mitigation Tracker
 st.subheader("Risk Mitigation Tracker")
-def map_risk_status(status):
+def map_risk(status):
     if status in ['Completed On Time', 'Completed Late']: return 'Completed'
     if status in ['In Draft', 'In Review']: return 'In Progress'
     if status == 'Resolved in Place': return 'Resolved in Place'
     return 'Need More Information'
 
-df['Mitigation_Cat'] = df['Status'].apply(map_risk_status)
-risk_counts = df['Mitigation_Cat'].value_counts()
+df['Cat'] = df['Status'].apply(map_risk)
+counts = df['Cat'].value_counts()
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Completed", risk_counts.get("Completed", 0))
-c2.metric("In Progress", risk_counts.get("In Progress", 0))
-c3.metric("Resolved in Place", risk_counts.get("Resolved in Place", 0))
-c4.metric("Need More Information", risk_counts.get("Need More Information", 0))
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Completed", counts.get("Completed", 0))
+col2.metric("In Progress", counts.get("In Progress", 0))
+col3.metric("Resolved in Place", counts.get("Resolved in Place", 0))
+col4.metric("Need Info", counts.get("Need More Information", 0))
 
-# --- 3. Charts Based on PDF Requirements ---
 st.divider()
-c_left, c_right = st.columns(2)
 
-with c_left:
+# 5. Charts with Data Labels
+col_a, col_b = st.columns(2)
+
+with col_a:
     st.subheader("Incidents by Department")
-    dept_chart = px.bar(df['Department'].value_counts(), orientation='h')
-    st.plotly_chart(dept_chart, use_container_width=True)
+    fig1 = px.bar(df['Department'].value_counts().reset_index(), 
+                  x='Department', y='count', text_auto=True)
+    st.plotly_chart(fig1, use_container_width=True)
 
-with c_right:
+with col_b:
     st.subheader("Incidents by Hazard Type")
-    hazard_chart = px.bar(df['Hazard Type'].value_counts())
-    st.plotly_chart(hazard_chart, use_container_width=True)
+    fig2 = px.bar(df['Hazard Type'].value_counts().reset_index(), 
+                  x='Hazard Type', y='count', text_auto=True)
+    st.plotly_chart(fig2, use_container_width=True)
 
-# --- 4. Raw Data View ---
+# 6. TCIR & DART Trend
+st.subheader("TCIR & DART Performance")
+fig3 = px.line(metrics, x='Month', y=['TCIR Actual', 'DART Actual'], 
+               markers=True, text='TCIR Actual')
+st.plotly_chart(fig3, use_container_width=True)
+
+# 7. Raw Data
 st.subheader("Incident Details")
-st.dataframe(df[['Incident', 'Status', 'Department', 'Hazard Type', 'Description']], use_container_width=True)
+st.dataframe(df, use_container_width=True)
