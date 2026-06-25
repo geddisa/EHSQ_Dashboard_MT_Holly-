@@ -2,34 +2,36 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
+# 1. Page Configuration
+st.set_page_config(page_title="EHSQ Performance Dashboard", layout="wide")
 st.title("EHSQ Performance Dashboard")
 
-# --- Load Data from Excel ---
+# 2. Data Loading
 @st.cache_data
-def load_data():
-    # Load the incident report
-    incidents = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx", sheet_name="Sheet1")
+def load_all_data():
+    # Load Incident Report
+    df_incidents = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx", sheet_name="Sheet1")
     
-    # Load all metrics from the master metrics file
-    # Ensure all tabs (CAPAs, Housekeeping, etc.) are in this file
-    xls = pd.ExcelFile("EHSQ Metrics.xlsx")
-    metrics = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+    # Load Metrics Master File
+    metrics_file = "EHSQ Metrics.xlsx"
+    tcir_dart = pd.read_excel(metrics_file, sheet_name="TCIR and DART")
+    housekeeping = pd.read_excel(metrics_file, sheet_name="Housekeeping", skiprows=1)
+    capas = pd.read_excel(metrics_file, sheet_name="CAPAs", skiprows=1)
     
-    return incidents, metrics
+    return df_incidents, tcir_dart, housekeeping, capas
 
-df_incidents, data_metrics = load_data()
+df, tcir_dart, housekeeping, capas = load_all_data()
 
-# --- Risk Mitigation Tracker (4-Box) ---
+# 3. Risk Mitigation Tracker (4-Box)
 st.subheader("Risk Mitigation Tracker")
-def map_status(status):
+def map_risk(status):
     if status in ['Completed On Time', 'Completed Late']: return 'Completed'
     if status in ['In Draft', 'In Review']: return 'In Progress'
     if status == 'Resolved in Place': return 'Resolved in Place'
     return 'Need More Information'
 
-df_incidents['Cat'] = df_incidents['Status'].apply(map_status)
-counts = df_incidents['Cat'].value_counts()
+df['Cat'] = df['Status'].apply(map_risk)
+counts = df['Cat'].value_counts()
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Completed", counts.get("Completed", 0))
@@ -37,22 +39,24 @@ c2.metric("In Progress", counts.get("In Progress", 0))
 c3.metric("Resolved in Place", counts.get("Resolved in Place", 0))
 c4.metric("Need Info", counts.get("Need More Information", 0))
 
-# --- Charts (Using Excel Data) ---
 st.divider()
-col1, col2 = st.columns(2)
 
-with col1:
+# 4. Charts Section
+col_left, col_right = st.columns(2)
+
+with col_left:
     st.subheader("TCIR & DART Trends")
-    tcir_data = data_metrics.get("TCIR and DART")
-    if tcir_data is not None:
-        fig = px.line(tcir_data, x='Month', y=['TCIR Actual', 'DART Actual'], 
-                      markers=True, text_auto='.2f')
-        st.plotly_chart(fig, use_container_width=True)
+    fig1 = px.line(tcir_dart, x='Month', y=['TCIR Actual', 'DART Actual'], markers=True)
+    fig1.update_traces(texttemplate='%{y:.2f}', textposition='top center')
+    st.plotly_chart(fig1, use_container_width=True)
 
-with col2:
-    st.subheader("Housekeeping Scores")
-    house = data_metrics.get("Housekeeping")
-    if house is not None:
-        fig2 = px.line(house, x='Unnamed: 0', y='Average Plant Score', 
-                       markers=True, text_auto='.2f')
-        st.plotly_chart(fig2, use_container_width=True)
+with col_right:
+    st.subheader("Housekeeping Performance")
+    fig2 = px.line(housekeeping, x='Unnamed: 0', y='Average Plant Score', markers=True)
+    fig2.update_traces(texttemplate='%{y:.2f}', textposition='top center')
+    st.plotly_chart(fig2, use_container_width=True)
+
+# 5. Raw Data Preview
+st.divider()
+st.subheader("Incident Details")
+st.dataframe(df, use_container_width=True)
