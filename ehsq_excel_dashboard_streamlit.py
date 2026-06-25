@@ -3,29 +3,43 @@ import pandas as pd
 import os
 import glob
 
-# Page Configuration
+# Set page layout
 st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
 
 st.title("EHSQ Management Dashboard")
 
-# 1. Automatic Data Loader
-def get_latest_file(folder, pattern):
-    list_of_files = glob.glob(f"{folder}/{pattern}")
-    return max(list_of_files, key=os.path.getctime)
-
+# --- DATA LOADING ---
 @st.cache_data
 def load_data():
-    incident_file = get_latest_file("data", "IncidentReports_*.xlsx")
-    metrics_file = "data/EHSQ Metrics.xlsx"
+    # Look for files in the same directory as this script
+    incident_files = glob.glob("IncidentReports_*.xlsx")
+    metrics_file = "EHSQ Metrics.xlsx"
     
-    df_incidents = pd.read_excel(incident_file)
+    if not incident_files:
+        st.error("Error: No 'IncidentReports_*.xlsx' file found in the repository root.")
+        st.stop()
+    if not os.path.exists(metrics_file):
+        st.error(f"Error: '{metrics_file}' not found.")
+        st.stop()
+        
+    # Get the latest incident file
+    latest_incident = max(incident_files, key=os.path.getctime)
+    
+    df_incidents = pd.read_excel(latest_incident)
     df_metrics = pd.read_excel(metrics_file, sheet_name=0)
     return df_incidents, df_metrics
 
+# Execute load
 df, metrics = load_data()
 
-# 2. Risk Mitigation Tracker Logic
+# --- RISK MITIGATION TRACKER ---
+st.subheader("Risk Mitigation Tracker")
+
 def get_tracker_counts(df):
+    # Ensure column exists
+    if 'Status' not in df.columns:
+        return {"Completed": 0, "In Progress": 0, "Resolved in Place": 0, "Need More Information": 0}
+        
     def categorize(status):
         if status in ['Completed On Time', 'Completed Late']: return 'Completed'
         if status in ['In Draft', 'In Review']: return 'In Progress'
@@ -43,8 +57,6 @@ def get_tracker_counts(df):
         "Need More Information": counts.get("Need More Information", 0)
     }
 
-# Display Risk Mitigation Tracker
-st.subheader("Risk Mitigation Tracker")
 counts = get_tracker_counts(df)
 
 col1, col2, col3, col4 = st.columns(4)
@@ -53,14 +65,7 @@ col2.metric("In Progress", counts["In Progress"])
 col3.metric("Resolved in Place", counts["Resolved in Place"])
 col4.metric("Need More Info", counts["Need More Information"])
 
-# 3. Data Tables & Visualization
+# --- DATA DISPLAY ---
 st.divider()
-tab1, tab2 = st.tabs(["Incident Overview", "EHSQ Metrics"])
-
-with tab1:
-    st.subheader("Recent Incident Data")
-    st.dataframe(df, use_container_width=True)
-
-with tab2:
-    st.subheader("Metric Performance")
-    st.dataframe(metrics, use_container_width=True)
+st.subheader("Raw Data View")
+st.dataframe(df, use_container_width=True)
