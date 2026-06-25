@@ -12,133 +12,52 @@ st.set_page_config(layout="wide")
 def load_data(inc_file, near_file, risk_file):
 
     if inc_file is None or near_file is None or risk_file is None:
-        st.warning("📂 Please upload ALL three files to continue.")
+        st.warning("Upload all 3 files")
         st.stop()
 
-    incidents = pd.read_excel(inc_file, engine="openpyxl")
-    near = pd.read_excel(near_file, engine="openpyxl")
-    risk = pd.read_excel(risk_file, engine="openpyxl")
+    inc = pd.read_excel(inc_file)
+    near = pd.read_excel(near_file)
+    risk = pd.read_excel(risk_file)
 
-    for df in [incidents, near, risk]:
-        df.columns = [str(c).strip() for c in df.columns]
+    for df in [inc, near, risk]:
+        df.columns = df.columns.str.strip()
 
-    # Dates
-    incidents["Date"] = pd.to_datetime(
-        incidents.get("Date of Incident (Local Plant Time)"),
-        errors="coerce"
-    )
-    near["Date"] = pd.to_datetime(
-        near.get("Date of Near Miss (Local Plant Time)"),
-        errors="coerce"
-    )
-    risk["Date"] = pd.to_datetime(
-        risk.get("Date Risk Identified (Local Plant Time)"),
-        errors="coerce"
-    )
+    inc["Date"] = pd.to_datetime(inc["Date of Incident (Local Plant Time)"], errors="coerce")
+    near["Date"] = pd.to_datetime(near["Date of Near Miss (Local Plant Time)"], errors="coerce")
+    risk["Date"] = pd.to_datetime(risk["Date Risk Identified (Local Plant Time)"], errors="coerce")
 
-    incidents["Source"] = "Incident"
-    near["Source"] = "Near Miss"
-    risk["Source"] = "Risk Notification"
-
-    return incidents, near, risk
+    return inc, near, risk
 
 
 # =========================================
-# INSIGHTS
+# SEVERITY (EXACT)
 # =========================================
-def generate_insights(df):
+def severity_chart(df):
 
-    if df.empty:
-        return "No data available."
-
-    total = len(df)
-    high = df["Risk Level"].astype(str).str.contains("high", case=False).sum()
-    overdue = df["Status"].astype(str).str.contains("overdue", case=False).sum()
-
-    high_pct = round((high / total) * 100, 1)
-    overdue_pct = round((overdue / total) * 100, 1)
-
-    text = f"""
-### 📊 Key Insights
-
-• {high_pct}% HIGH risk  
-• {overdue_pct}% overdue  
-
-"""
-
-    if high_pct > 25:
-        text += "🔴 High exposure — attention needed\n"
-    else:
-        text += "🟢 Risk controlled\n"
-
-    if overdue_pct > 20:
-        text += "🔴 Action delays present\n"
-    else:
-        text += "🟢 Actions on track\n"
-
-    return text
-
-
-# =========================================
-# ✅ EXACT SEVERITY GRAPH (YOUR LOGIC)
-# =========================================
-def severity_graph(df):
-
-    df = df.copy()
-
-    severity_mapping = {
+    mapping = {
         'Property Damage': 25,
         'Record Only - No Treatment': 50,
         'First Aid': 75,
-        'Molten Metal Spill > 25 lbs': 150,
-        'Molten Metal Explosion (Force 2 or 3)': 150,
         'Other Recordable Case': 250,
         'Restricted or Transferred Work': 250,
         'Days Away From Work': 350,
         'Recordable - Fatality': 600
     }
 
-    # ✅ SAME fallback logic as your file
-    df["Points"] = (
-        df["Injury Classification"].map(severity_mapping)
-        .fillna(df["Type"].map(severity_mapping))
-        .fillna(0)
-    )
-
+    df["Points"] = df["Injury Classification"].map(mapping).fillna(0)
     df["Week"] = df["Date"].dt.isocalendar().week
 
-    weekly = df.groupby("Week")["Points"].sum()
+    weekly = df.groupby("Week")["Points"].sum().reset_index()
 
-    current_week = 24  # SAME concept as your script
-    weekly = weekly.reindex(range(1, current_week + 1), fill_value=0)
-
-    weekly = weekly.reset_index()
-    weekly.columns = ["Week", "Points"]
-
-    # ✅ PLOTLY VERSION (matches your matplotlib zones)
     fig = go.Figure()
 
-    # Zones
     fig.add_hrect(y0=0, y1=400, fillcolor="lightgreen", opacity=0.4)
     fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.4)
     fig.add_hrect(y0=800, y1=1250, fillcolor="lightcoral", opacity=0.4)
 
-    # Line
-    fig.add_trace(go.Scatter(
-        x=weekly["Week"],
-        y=weekly["Points"],
-        mode="lines+markers",
-        line=dict(color="black", width=3),
-        marker=dict(size=6)
-    ))
+    fig.add_trace(go.Scatter(x=weekly["Week"], y=weekly["Points"], mode="lines+markers"))
 
-    fig.update_layout(
-        title="Incident Severity Graph",
-        xaxis_title="Week",
-        yaxis_title="Severity Points",
-        yaxis=dict(range=[0, 1250], dtick=200),
-        xaxis=dict(dtick=1)
-    )
+    fig.update_layout(title="Severity Trend")
 
     return fig
 
@@ -150,85 +69,105 @@ def main():
 
     st.title("📊 EHSQ EXECUTIVE DASHBOARD")
 
-    # Upload
-    st.sidebar.header("📂 Upload Files")
-    inc_file = st.sidebar.file_uploader("Incident Reports", type=["xlsx"])
+    # Uploads
+    inc_file = st.sidebar.file_uploader("Incidents", type=["xlsx"])
     near_file = st.sidebar.file_uploader("Near Miss", type=["xlsx"])
     risk_file = st.sidebar.file_uploader("Risk Notifications", type=["xlsx"])
 
-    incidents, near, risk = load_data(inc_file, near_file, risk_file)
+    inc, near, risk = load_data(inc_file, near_file, risk_file)
 
-    combined = pd.concat([risk, near, incidents], ignore_index=True)
+    # =========================================
+    # 🔥 EXECUTIVE KPIs (TOP ROW)
+    # =========================================
+    st.subheader("Executive KPIs")
 
-    # FILTERS
-    st.sidebar.header("🔎 Filters")
+    total_inc = len(inc)
+    severe = inc["Injury Classification"].astype(str).str.contains("Days Away|Fatality").sum()
+    recordable = inc["Injury Classification"].astype(str).str.contains("Recordable|Days Away").sum()
 
-    dept = st.sidebar.multiselect("Department", combined["Department"].dropna().unique())
-    source = st.sidebar.multiselect("Source", combined["Source"].unique())
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Incidents", total_inc)
+    c2.metric("Severe Incidents", severe)
+    c3.metric("Recordables", recordable)
 
-    if dept:
-        combined = combined[combined["Department"].isin(dept)]
+    # =========================================
+    # 🔥 INCIDENT TREND
+    # =========================================
+    st.subheader("Incident Trend")
 
-    if source:
-        combined = combined[combined["Source"].isin(source)]
+    trend = inc.groupby(inc["Date"].dt.to_period("M")).size().reset_index(name="Count")
+    trend["Date"] = trend["Date"].dt.to_timestamp()
 
-    # TABS
-    tab1, tab2, tab3 = st.tabs([
-        "🚨 Overview",
-        "📈 Trends",
-        "⚠️ Risk Tracker"
-    ])
+    st.plotly_chart(px.line(trend, x="Date", y="Count"))
 
-    # OVERVIEW
-    with tab1:
+    # =========================================
+    # 🔥 INJURY CLASSIFICATION
+    # =========================================
+    st.subheader("Injury Classification")
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Risks", len(combined[combined["Source"] == "Risk Notification"]))
-        c2.metric("Near Miss", len(combined[combined["Source"] == "Near Miss"]))
-        c3.metric("Incidents", len(combined[combined["Source"] == "Incident"]))
+    class_df = inc["Injury Classification"].value_counts().reset_index()
+    class_df.columns = ["Type", "Count"]
 
-        # Funnel
-        funnel = pd.DataFrame({
-            "Stage": ["Risk", "Near Miss", "Incident"],
-            "Count": [
-                len(risk),
-                len(near),
-                len(incidents)
-            ]
-        })
+    st.plotly_chart(px.bar(class_df, x="Type", y="Count"))
 
-        st.plotly_chart(px.funnel(funnel, x="Count", y="Stage"))
+    # =========================================
+    # 🔥 HAZARD TYPE
+    # =========================================
+    st.subheader("Hazard Type")
 
-        # ✅ SEVERITY GRAPH (EXACT)
-        st.plotly_chart(severity_graph(incidents), use_container_width=True)
+    haz_df = inc["Hazard Type"].value_counts().reset_index()
+    haz_df.columns = ["Hazard", "Count"]
 
-        st.markdown(generate_insights(combined))
+    st.plotly_chart(px.bar(haz_df, x="Hazard", y="Count"))
 
-    # TRENDS
-    with tab2:
+    # =========================================
+    # 🔥 DEPARTMENT BREAKDOWN
+    # =========================================
+    st.subheader("Department Breakdown")
 
-        df_trend = combined.dropna(subset=["Date"]).copy()
-        df_trend["Month"] = df_trend["Date"].dt.to_period("M").dt.to_timestamp()
+    dept_df = inc["Department"].value_counts().reset_index()
+    dept_df.columns = ["Dept", "Count"]
 
-        trend = df_trend.groupby(["Month", "Source"]).size().reset_index(name="Count")
+    st.plotly_chart(px.bar(dept_df, x="Dept", y="Count"))
 
-        st.plotly_chart(
-            px.line(trend, x="Month", y="Count", color="Source", markers=True),
-            use_container_width=True
-        )
+    # =========================================
+    # 🔥 SEVERITY GRAPH
+    # =========================================
+    st.plotly_chart(severity_chart(inc), use_container_width=True)
 
-    # RISK TRACKER
-    with tab3:
+    # =========================================
+    # 🔥 RISK TRACKER
+    # =========================================
+    st.subheader("Risk Mitigation Tracker")
 
-        status = combined["Status"].astype(str).str.lower()
+    status = risk["Status"].astype(str).str.lower()
 
-        c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Completed", status.str.contains("completed").sum())
+    c2.metric("In Progress", status.str.contains("review").sum())
+    c3.metric("Resolved", status.str.contains("completed on time").sum())
+    c4.metric("Needs Info", status.str.contains("draft|overdue").sum())
 
-        c1.metric("Completed", status.str.contains("completed").sum())
-        c2.metric("In Progress", status.str.contains("review").sum())
-        c3.metric("Resolved", status.str.contains("completed on time").sum())
-        c4.metric("Needs Info", status.str.contains("draft|overdue").sum())
+    # =========================================
+    # 🔥 INCIDENT TYPE
+    # =========================================
+    st.subheader("Incident Type")
+
+    type_df = inc["Type"].value_counts().reset_index()
+    type_df.columns = ["Type", "Count"]
+
+    st.plotly_chart(px.bar(type_df, x="Type", y="Count"))
+
+    # =========================================
+    # 🔥 NEAR MISS + OBSERVATIONS
+    # =========================================
+    st.subheader("Observations")
+
+    c1, c2 = st.columns(2)
+    c1.metric("Near Miss Count", len(near))
+    c2.metric("Risk Notifications", len(risk))
 
 
+# RUN
 if __name__ == "__main__":
     main()
