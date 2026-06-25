@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -5,23 +6,33 @@ import plotly.express as px
 st.set_page_config(layout="wide")
 
 # =========================================
-# LOAD DATA
+# LOAD DATA (UPLOAD VERSION ✅ FIXED)
 # =========================================
-@st.cache_data
-def load_data():
-    incidents = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx", engine="openpyxl")
-    near = pd.read_excel("NearMisses_All_MTH_2026-06-25.xlsx", engine="openpyxl")
-    risk = pd.read_excel("RiskNotifications_All_MTH_2026-06-25.xlsx", engine="openpyxl")
+def load_data(inc_file, near_file, risk_file):
+
+    if inc_file is None or near_file is None or risk_file is None:
+        st.warning("📂 Please upload ALL three files to continue.")
+        st.stop()
+
+    incidents = pd.read_excel(inc_file, engine="openpyxl")
+    near = pd.read_excel(near_file, engine="openpyxl")
+    risk = pd.read_excel(risk_file, engine="openpyxl")
 
     for df in [incidents, near, risk]:
         df.columns = [str(c).strip() for c in df.columns]
 
-    # Dates
-    incidents["Date"] = pd.to_datetime(incidents.get("Date of Incident (Local Plant Time)"), errors="coerce")
-    near["Date"] = pd.to_datetime(near.get("Date of Near Miss (Local Plant Time)"), errors="coerce")
-    risk["Date"] = pd.to_datetime(risk.get("Date Risk Identified (Local Plant Time)"), errors="coerce")
+    # ✅ SAFE DATE HANDLING
+    incidents["Date"] = pd.to_datetime(
+        incidents.get("Date of Incident (Local Plant Time)"), errors="coerce"
+    )
+    near["Date"] = pd.to_datetime(
+        near.get("Date of Near Miss (Local Plant Time)"), errors="coerce"
+    )
+    risk["Date"] = pd.to_datetime(
+        risk.get("Date Risk Identified (Local Plant Time)"), errors="coerce"
+    )
 
-    # Add Source
+    # ✅ ADD SOURCE
     incidents["Source"] = "Incident"
     near["Source"] = "Near Miss"
     risk["Source"] = "Risk Notification"
@@ -30,82 +41,86 @@ def load_data():
 
 
 # =========================================
-# EXECUTIVE INSIGHTS
+# EXECUTIVE INSIGHTS ENGINE ✅
 # =========================================
 def generate_insights(df):
+
+    if df.empty:
+        return "No data available."
 
     total = len(df)
 
     high = df["Risk Level"].astype(str).str.contains("high", case=False).sum()
     overdue = df["Status"].astype(str).str.contains("overdue", case=False).sum()
 
-    if total == 0:
-        return "No data available."
-
     high_pct = round((high / total) * 100, 1)
     overdue_pct = round((overdue / total) * 100, 1)
 
     insight = f"""
-    • {high_pct}% of reported items are HIGH risk  
-    • {overdue_pct}% of actions are overdue or delayed  
+### 📊 Key Insights
 
-    """
+• **{high_pct}%** of records are HIGH risk  
+• **{overdue_pct}%** of actions are overdue  
+
+"""
 
     if high_pct > 25:
-        insight += "🔴 Elevated risk exposure detected — leadership attention required.\n"
+        insight += "🔴 High risk exposure detected — leadership action recommended.\n"
     else:
-        insight += "🟢 Risk levels are within acceptable range.\n"
+        insight += "🟢 Risk levels are controlled.\n"
 
     if overdue_pct > 20:
-        insight += "🔴 Action completion delays present — follow-up needed.\n"
+        insight += "🔴 Delays in action completion — follow-up required.\n"
     else:
-        insight += "🟢 Action tracking performing well.\n"
+        insight += "🟢 Action closure performance is strong.\n"
 
     return insight
 
 
 # =========================================
-# MAIN
+# MAIN APP
 # =========================================
 def main():
 
     st.title("📊 EHSQ EXECUTIVE DASHBOARD")
 
-    incidents, near, risk = load_data()
+    # =========================================
+    # 📂 FILE UPLOAD (THIS FIXES YOUR ERROR)
+    # =========================================
+    st.sidebar.header("📂 Upload Data")
+
+    inc_file = st.sidebar.file_uploader("Incident Reports", type=["xlsx"])
+    near_file = st.sidebar.file_uploader("Near Miss Reports", type=["xlsx"])
+    risk_file = st.sidebar.file_uploader("Risk Notifications", type=["xlsx"])
+
+    incidents, near, risk = load_data(inc_file, near_file, risk_file)
 
     # =========================================
-    # COMBINED DATA
+    # COMBINE ALL DATA
     # =========================================
-    combined = pd.concat([
-        risk,
-        near,
-        incidents
-    ], ignore_index=True)
+    combined = pd.concat([risk, near, incidents], ignore_index=True)
 
     # =========================================
-    # 🔥 FILTERS (Power BI Style)
+    # 🔎 FILTERS (EXECUTIVE SLICERS)
     # =========================================
     st.sidebar.header("🔎 Filters")
 
     dept = st.sidebar.multiselect(
         "Department",
-        options=sorted(combined["Department"].dropna().unique()),
-        default=None
+        options=sorted(combined["Department"].dropna().unique())
     )
 
     source = st.sidebar.multiselect(
         "Source",
-        options=combined["Source"].unique(),
-        default=None
+        options=combined["Source"].unique()
     )
 
     risk_level = st.sidebar.multiselect(
         "Risk Level",
-        options=combined["Risk Level"].dropna().unique(),
-        default=None
+        options=combined["Risk Level"].dropna().unique()
     )
 
-    # Apply filters
+    # APPLY FILTERS
     if dept:
         combined = combined[combined["Department"].isin(dept)]
 
@@ -129,7 +144,7 @@ def main():
     # =========================================
     with tab1:
 
-        st.subheader("Safety Pipeline")
+        st.subheader("Safety Pipeline Overview")
 
         risk_count = len(combined[combined["Source"] == "Risk Notification"])
         near_count = len(combined[combined["Source"] == "Near Miss"])
@@ -137,12 +152,12 @@ def main():
 
         c1, c2, c3 = st.columns(3)
         c1.metric("⚠️ Risks", risk_count)
-        c2.metric("⚡ Near Miss", near_count)
+        c2.metric("⚡ Near Misses", near_count)
         c3.metric("🚨 Incidents", inc_count)
 
-        # Funnel
+        # FUNNEL
         funnel = pd.DataFrame({
-            "Stage": ["Risk", "Near Miss", "Incident"],
+            "Stage": ["Risk Notifications", "Near Misses", "Incidents"],
             "Count": [risk_count, near_count, inc_count]
         })
 
@@ -150,8 +165,6 @@ def main():
         st.plotly_chart(fig, use_container_width=True)
 
         # ✅ EXECUTIVE INSIGHTS
-        st.subheader("📢 Executive Insights")
-
         st.markdown(generate_insights(combined))
 
     # =========================================
@@ -159,22 +172,26 @@ def main():
     # =========================================
     with tab2:
 
-        st.subheader("Trend Over Time")
+        st.subheader("Trend Analysis")
 
         df_trend = combined.dropna(subset=["Date"]).copy()
-        df_trend["Month"] = df_trend["Date"].dt.to_period("M").dt.to_timestamp()
 
-        trend = df_trend.groupby(["Month", "Source"]).size().reset_index(name="Count")
+        if not df_trend.empty:
+            df_trend["Month"] = df_trend["Date"].dt.to_period("M").dt.to_timestamp()
 
-        fig = px.line(trend, x="Month", y="Count", color="Source", markers=True)
-        st.plotly_chart(fig, use_container_width=True)
+            trend = df_trend.groupby(["Month", "Source"]).size().reset_index(name="Count")
+
+            fig = px.line(trend, x="Month", y="Count", color="Source", markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No valid date data available for trend.")
 
     # =========================================
     # ⚠️ RISK MITIGATION
     # =========================================
     with tab3:
 
-        st.subheader("Risk Status Breakdown")
+        st.subheader("Risk Mitigation Tracker")
 
         status = combined["Status"].astype(str).str.lower()
 
@@ -189,26 +206,32 @@ def main():
         c3.metric("✔️ Resolved", resolved)
         c4.metric("❗ Needs Info", need_info)
 
-        # Distribution
+        # STATUS DISTRIBUTION
         st.subheader("Status Distribution")
+
         dist = combined["Status"].value_counts().reset_index()
         dist.columns = ["Status", "Count"]
 
         fig = px.bar(dist, x="Status", y="Count", text="Count")
         st.plotly_chart(fig, use_container_width=True)
 
-        # Open trend
+        # OPEN TREND
         st.subheader("Open Risk Trend")
 
         open_df = combined[status.str.contains("draft|review")].copy()
-        open_df["Month"] = open_df["Date"].dt.to_period("M").dt.to_timestamp()
 
-        trend = open_df.groupby("Month").size().reset_index(name="Open Items")
+        if not open_df.empty:
+            open_df["Month"] = open_df["Date"].dt.to_period("M").dt.to_timestamp()
 
-        fig = px.line(trend, x="Month", y="Open Items", markers=True)
-        st.plotly_chart(fig, use_container_width=True)
+            trend = open_df.groupby("Month").size().reset_index(name="Open Items")
 
+            fig = px.line(trend, x="Month", y="Open Items", markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No open risks found.")
 
-# RUN
+# =========================================
+# RUN APP ✅
+# =========================================
 if __name__ == "__main__":
     main()
