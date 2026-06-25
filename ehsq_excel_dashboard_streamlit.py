@@ -1,65 +1,58 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import glob
 
 st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
-st.title("Comprehensive EHSQ KPI Dashboard")
+st.title("EHSQ Performance Dashboard")
 
-# --- Helper to load all CSVs ---
+# --- Load Data from Excel ---
 @st.cache_data
 def load_data():
-    files = glob.glob("*.csv")
-    data = {f.replace("EHSQ Metrics.xlsx - ", "").replace(".csv", ""): pd.read_csv(f) for f in files}
-    return data
+    # Load the incident report
+    incidents = pd.read_excel("IncidentReports_All_MTH_2026-06-25.xlsx", sheet_name="Sheet1")
+    
+    # Load all metrics from the master metrics file
+    # Ensure all tabs (CAPAs, Housekeeping, etc.) are in this file
+    xls = pd.ExcelFile("EHSQ Metrics.xlsx")
+    metrics = {sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names}
+    
+    return incidents, metrics
 
-data = load_data()
+df_incidents, data_metrics = load_data()
 
-# --- Tab Navigation ---
-tab1, tab2, tab3 = st.tabs(["Safety & Incidents", "Performance Metrics", "Compliance & CAPAs"])
+# --- Risk Mitigation Tracker (4-Box) ---
+st.subheader("Risk Mitigation Tracker")
+def map_status(status):
+    if status in ['Completed On Time', 'Completed Late']: return 'Completed'
+    if status in ['In Draft', 'In Review']: return 'In Progress'
+    if status == 'Resolved in Place': return 'Resolved in Place'
+    return 'Need More Information'
 
-with tab1:
-    st.header("Safety Performance")
-    # TCIR & DART Trend
-    df_tcir = data.get("TCIR and DART")
-    if df_tcir is not None:
-        fig1 = px.line(df_tcir, x='Month', y=['TCIR Actual', 'DART Actual'], 
-                       markers=True, title="TCIR & DART Trends", text_auto='.2f')
-        st.plotly_chart(fig1, use_container_width=True)
+df_incidents['Cat'] = df_incidents['Status'].apply(map_status)
+counts = df_incidents['Cat'].value_counts()
 
-    # Severity Ratings
-    df_sev = data.get("Overall Severity Ratings")
-    if df_sev is not None:
-        st.subheader("Severity Distribution")
-        st.dataframe(df_sev.head(10), use_container_width=True)
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Completed", counts.get("Completed", 0))
+c2.metric("In Progress", counts.get("In Progress", 0))
+c3.metric("Resolved in Place", counts.get("Resolved in Place", 0))
+c4.metric("Need Info", counts.get("Need More Information", 0))
 
-with tab2:
-    st.header("Observations & Housekeeping")
-    # Safe Observations
-    df_obs = data.get("Safe Observations")
-    if df_obs is not None:
-        fig2 = px.bar(df_obs, x='Unnamed: 0', y='% Completed', 
-                      title="Safe Observation Completion %", text_auto='.0%')
+# --- Charts (Using Excel Data) ---
+st.divider()
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("TCIR & DART Trends")
+    tcir_data = data_metrics.get("TCIR and DART")
+    if tcir_data is not None:
+        fig = px.line(tcir_data, x='Month', y=['TCIR Actual', 'DART Actual'], 
+                      markers=True, text_auto='.2f')
+        st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    st.subheader("Housekeeping Scores")
+    house = data_metrics.get("Housekeeping")
+    if house is not None:
+        fig2 = px.line(house, x='Unnamed: 0', y='Average Plant Score', 
+                       markers=True, text_auto='.2f')
         st.plotly_chart(fig2, use_container_width=True)
-
-    # Housekeeping
-    df_house = data.get("Housekeeping")
-    if df_house is not None:
-        fig3 = px.line(df_house, x='Unnamed: 0', y='Average Plant Score', 
-                       title="Housekeeping Scores", markers=True, text_auto='.2f')
-        st.plotly_chart(fig3, use_container_width=True)
-
-with tab3:
-    st.header("CAPA & Compliance")
-    # CAPAs
-    df_capa = data.get("CAPAs")
-    if df_capa is not None:
-        fig4 = px.bar(df_capa, x='Unnamed: 0', y='% On Time', 
-                      title="CAPA On-Time Performance", text_auto='.0%')
-        st.plotly_chart(fig4, use_container_width=True)
-
-    # Environmental
-    df_env = data.get("Environmental Compliance Issues")
-    if df_env is not None:
-        st.subheader("Environmental Issues")
-        st.bar_chart(df_env.set_index('2026 Environmental Compliance Issues')['# of Reported Compliance Issues'])
