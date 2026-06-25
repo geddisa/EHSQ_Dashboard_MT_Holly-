@@ -1,4 +1,3 @@
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -7,7 +6,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="EHSQ Dashboard", layout="wide")
 
 # =========================
-# STYLING (Power BI look)
+# STYLE (Power BI look)
 # =========================
 st.markdown("""
 <style>
@@ -30,7 +29,6 @@ def load_incidents(file):
     file = file if file else "IncidentReports_All_MTH_2026-06-18.xlsx"
     df = pd.read_excel(file, engine="openpyxl")
     df.columns = [str(c).strip() for c in df.columns]
-    df = df.replace({pd.NA: None})
     df["Date"] = pd.to_datetime(df.get("Date of Incident (Local Plant Time)"), errors="coerce")
     return df
 
@@ -39,14 +37,26 @@ def load_incidents(file):
 def load_metrics(file):
     file = file if file else "EHSQ Metrics.xlsx"
 
-    tcir = pd.read_excel(file, sheet_name="TCIR and DART", skiprows=1, engine="openpyxl")
-    fsi = pd.read_excel(file, sheet_name="FSI Reports", skiprows=1, engine="openpyxl")
-    capas = pd.read_excel(file, sheet_name="CAPAs", skiprows=1, engine="openpyxl")
-
-    for d in [tcir, fsi, capas]:
-        d.columns = [str(c).strip() for c in d.columns]
+    # ✅ read WITHOUT assuming headers
+    tcir = pd.read_excel(file, sheet_name="TCIR and DART", engine="openpyxl")
+    fsi = pd.read_excel(file, sheet_name="FSI Reports", engine="openpyxl")
+    capas = pd.read_excel(file, sheet_name="CAPAs", engine="openpyxl")
 
     return tcir, fsi, capas
+
+
+# =========================
+# CLEAN FUNCTION (IMPORTANT)
+# =========================
+def clean_table(df):
+    df = df.copy()
+    df = df.dropna(how="all")
+
+    # find first row with real headers
+    df.columns = [str(c).strip() for c in df.columns]
+    df = df.reset_index(drop=True)
+
+    return df
 
 
 # =========================
@@ -60,7 +70,7 @@ def main():
     met_file = st.sidebar.file_uploader("Metrics File", type=["xlsx"])
 
     df = load_incidents(inc_file)
-    tcir, fsi, capas = load_metrics(met_file)
+    tcir_raw, fsi_raw, capas_raw = load_metrics(met_file)
 
     tab1, tab2 = st.tabs(["🚨 Incident Dashboard", "📈 Metrics Dashboard"])
 
@@ -69,7 +79,7 @@ def main():
     # ======================================================
     with tab1:
 
-        # KPIs
+        # KPI
         st.markdown('<div class="card">', unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
 
@@ -84,22 +94,20 @@ def main():
                   ]).sum())
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Trend
+        # TREND
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
         trend = df.dropna(subset=["Date"]).copy()
         trend["Month"] = trend["Date"].dt.to_period("M").dt.to_timestamp()
         trend = trend.groupby("Month").size().reset_index(name="Count")
 
-        fig = px.line(trend, x="Month", y="Count", markers=True, text="Count")
+        fig = px.line(trend, x="Month", y="Count", markers=True)
         st.subheader("Incidents Over Time")
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # =========================
-        # ✅ EXACT SEVERITY GRAPH
-        # =========================
+        # ✅ SEVERITY GRAPH (EXACT LOGIC)
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("Incident Severity Graph")
 
@@ -147,116 +155,74 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ======================================================
-    # METRICS TAB (FULL)
+    # METRICS TAB
     # ======================================================
     with tab2:
 
         st.header("📈 Metrics Dashboard")
 
+        # CLEAN TABLES
+        tcir = clean_table(tcir_raw)
+        fsi = clean_table(fsi_raw)
+        capas = clean_table(capas_raw)
+
         # ================= TCIR =================
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("TCIR")
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=tcir["Month"], y=tcir["TCIR Actual"], mode="lines+markers", name="Actual"))
-        fig.add_trace(go.Scatter(x=tcir["Month"], y=tcir["TCIR Target"], mode="lines", name="Target"))
-        fig.add_trace(go.Scatter(x=tcir["Month"], y=tcir["TCIR Industry Average"], mode="lines", name="Industry"))
+        try:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=tcir.iloc[:,0], y=tcir.iloc[:,1], mode="lines+markers", name="Actual"))
+            fig.add_trace(go.Scatter(x=tcir.iloc[:,0], y=tcir.iloc[:,2], mode="lines", name="Target"))
+            fig.add_trace(go.Scatter(x=tcir.iloc[:,0], y=tcir.iloc[:,5], mode="lines", name="Industry"))
+            st.plotly_chart(fig, use_container_width=True)
+        except:
+            st.warning("TCIR chart format issue")
 
-        st.plotly_chart(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ================= DART =================
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("DART")
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=tcir["Month"], y=tcir["DART Actual"], mode="lines+markers"))
-        fig.add_trace(go.Scatter(x=tcir["Month"], y=tcir["DART Target"], mode="lines"))
-        fig.add_trace(go.Scatter(x=tcir["Month"], y=tcir["DART Industry Average"], mode="lines"))
-
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-      
-        # ================= FSI (FIXED ✅) =================
+        # ================= FSI =================
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("FSI Reports")
 
-        # ✅ CLEAN THE DATA
-        fsi_clean = fsi.copy()
+        cols = fsi.columns
+        month = cols[0]
+        on_time = next((c for c in cols if "On Time" in c and "%" not in c), None)
+        overdue = next((c for c in cols if "Over" in c), None)
+        percent = next((c for c in cols if "%" in c), None)
 
-        # Drop empty rows
-        fsi_clean = fsi_clean.dropna(how="all")
+        if on_time and overdue:
+            fig = px.bar(fsi, x=month, y=[on_time, overdue], barmode="group")
+            st.plotly_chart(fig, use_container_width=True)
 
-        # Rename columns safely
-        fsi_clean.columns = [str(c).strip() for c in fsi_clean.columns]
+        if percent:
+            fig = px.line(fsi, x=month, y=percent, markers=True)
+            fig.add_hline(y=1)
+            st.plotly_chart(fig, use_container_width=True)
 
-        # ✅ FIND REAL COLUMN NAMES
-        col_month = fsi_clean.columns[0]
-        col_ontime = next((c for c in fsi_clean.columns if "on time" in c.lower() and "%" not in c.lower()), None)
-        col_overdue = next((c for c in fsi_clean.columns if "over" in c.lower()), None)
-        col_percent = next((c for c in fsi_clean.columns if "%" in c.lower()), None)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # ✅ BAR CHART (ONLY IF FOUND)
-        if col_ontime and col_overdue:
-            fig = px.bar(
-            fsi_clean,
-            x=col_month,
-            y=[col_ontime, col_overdue],
-            barmode="group"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        # ================= CAPA =================
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("CAPAs")
 
-# ✅ % LINE
-if col_percent:
-    fig = px.line(
-        fsi_clean,
-        x=col_month,
-        y=col_percent,
-        markers=True
-    )
+        cols = capas.columns
+        month = cols[0]
+        on_time = next((c for c in cols if "On Time" in c and "%" not in c), None)
+        overdue = next((c for c in cols if "Over" in c), None)
+        percent = next((c for c in cols if "%" in c), None)
 
-    fig.add_hline(y=1, line_dash="dash", line_color="green")
-    st.plotly_chart(fig, use_container_width=True)
+        if on_time and overdue:
+            fig = px.bar(capas, x=month, y=[on_time, overdue], barmode="group")
+            st.plotly_chart(fig, use_container_width=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
+        if percent:
+            fig = px.line(capas, x=month, y=percent, markers=True)
+            fig.add_hline(y=0.8)
+            st.plotly_chart(fig, use_container_width=True)
 
+        st.markdown('</div>', unsafe_allow_html=True)
 
-      # ================= CAPA (FIXED ✅) =================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("CAPAs")
-
-capas_clean = capas.copy()
-capas_clean = capas_clean.dropna(how="all")
-
-capas_clean.columns = [str(c).strip() for c in capas_clean.columns]
-
-col_month = capas_clean.columns[0]
-col_ontime = next((c for c in capas_clean.columns if "on time" in c.lower() and "%" not in c.lower()), None)
-col_overdue = next((c for c in capas_clean.columns if "over" in c.lower()), None)
-col_percent = next((c for c in capas_clean.columns if "%" in c.lower()), None)
-
-if col_ontime and col_overdue:
-    fig = px.bar(
-        capas_clean,
-        x=col_month,
-        y=[col_ontime, col_overdue],
-        barmode="group"
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-if col_percent:
-    fig = px.line(
-        capas_clean,
-        x=col_month,
-        y=col_percent,
-        markers=True
-    )
-
-    fig.add_hline(y=0.8, line_dash="dash", line_color="red")
-    st.plotly_chart(fig, use_container_width=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
 
 # RUN
 if __name__ == "__main__":
