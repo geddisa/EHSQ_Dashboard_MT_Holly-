@@ -3,18 +3,21 @@ import pandas as pd
 import plotly.express as px
 import matplotlib.pyplot as plt
 
-st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
+st.set_page_config(layout="wide", page_title="EHSQ Dashboard")
 st.title("EHSQ Performance Dashboard")
 
-# Paths
 FILE_PATH = "EHSQ Metrics.xlsx"
 INCIDENT_PATH = "IncidentReports_All_MTH_2026-06-25.xlsx"
 
 @st.cache_data
 def load_all_data():
-    # Load all sheets with appropriate skiprow/header adjustments
+    # Load Incidents directly
+    incidents = pd.read_excel(INCIDENT_PATH)
+    # Debug: Display columns if you hit another error
+    # st.write("Incidents columns:", incidents.columns.tolist())
+    
     return {
-        "Incidents": pd.read_excel(INCIDENT_PATH),
+        "Incidents": incidents,
         "TCIR": pd.read_excel(FILE_PATH, sheet_name="TCIR and DART", skiprows=1),
         "Housekeeping": pd.read_excel(FILE_PATH, sheet_name="Housekeeping", skiprows=2),
         "CAPAs": pd.read_excel(FILE_PATH, sheet_name="CAPAs", skiprows=2),
@@ -24,10 +27,12 @@ def load_all_data():
 
 data = load_all_data()
 df = data["Incidents"]
+
+# Use the EXACT column name from your CSV metadata: 'Date of Incident (EDT)'
 df['Date'] = pd.to_datetime(df['Date of Incident (EDT)'])
 df['Week'] = df['Date'].dt.isocalendar().week
 
-# --- Risk Mapping ---
+# Mapping
 def map_risk(status):
     if status in ['Completed On Time', 'Completed Late']: return 'Completed'
     if status in ['In Draft', 'In Review']: return 'In Progress'
@@ -36,9 +41,10 @@ def map_risk(status):
 df['Cat'] = df['Status'].apply(map_risk)
 counts = df['Cat'].value_counts()
 
+# --- Layout ---
 tabs = st.tabs(["Overview", "Severity Graph", "KPI Visuals", "Data Explorer"])
 
-with tabs[0]: # Dashboard Overview
+with tabs[0]: 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Incidents", len(df))
     c2.metric("Avg Housekeeping", f"{data['Housekeeping']['Average Plant Score'].mean():.2%}")
@@ -47,6 +53,7 @@ with tabs[0]: # Dashboard Overview
 
 with tabs[1]: # Severity Graph
     st.subheader("Incident Severity Trend (2026)")
+    # Using 'Classification ' (note the trailing space in your header)
     sev_map = dict(zip(data['Severity']['Classification '], data['Severity']['Points Assigned']))
     df['Points'] = df['Injury Classification'].map(sev_map).fillna(0)
     w_scores = df.groupby('Week')['Points'].sum().reindex(range(1, 25), fill_value=0)
@@ -71,6 +78,6 @@ with tabs[2]: # KPI Visuals
         st.plotly_chart(px.bar(df['Type'].value_counts().reset_index(), x='Type', y='count', title="Incidents by Type"))
         st.plotly_chart(px.bar(df['Hazard Type'].value_counts().reset_index(), x='Hazard Type', y='count', title="Incidents by Hazard"))
 
-with tabs[3]: # Data Explorer
+with tabs[3]: 
     sheet = st.selectbox("Select Data", list(data.keys()))
     st.dataframe(data[sheet], use_container_width=True)
