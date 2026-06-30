@@ -57,7 +57,7 @@ with tabs[0]: # Dashboard Overview
     
     st.divider()
     
-    st.subheader("Recent Incidents (June 2026)")
+    st.subheader("Recent Incidents")
     june_incidents = df_2026[df_2026['Date of Incident (UTC)'].dt.month == 6]
     if not june_incidents.empty:
         st.dataframe(june_incidents.sort_values(by='Date of Incident (UTC)', ascending=False), use_container_width=True)
@@ -66,7 +66,7 @@ with tabs[0]: # Dashboard Overview
     
     st.divider()
     
-    st.subheader("Incident Severity Trend (2026)")
+    st.subheader("Incident Severity Trend")
     severity_mapping = {
         'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
         'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
@@ -132,6 +132,3 @@ with tabs[2]: # Core Metrics
         fig2 = px.bar(data["CAPAs"], x=data["CAPAs"].columns[0], y='% On Time', title="CAPA On-Time Performance")
         st.plotly_chart(fig2, use_container_width=True)
 
-with tabs[3]: # Data Explorer
-    selected = st.selectbox("Select Excel Sheet", list(data.keys()))
-    st.dataframe(data[selected], use_container_width=True)
