@@ -22,7 +22,6 @@ def load_all_data():
             "FSI": clean_columns(pd.read_excel(metrics_path, sheet_name="FSI Reports", skiprows=1)),
             "CAPAs": clean_columns(pd.read_excel(metrics_path, sheet_name="CAPAs", skiprows=1)),
             "TCIR": clean_columns(pd.read_excel(metrics_path, sheet_name="TCIR and DART", skiprows=1)),
-            # Load your specific Audit sheets here
             "Lead_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs - Leadership")),
             "GS_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs - GS and EHS")),
             "HSEQ_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs GS EHS"))
@@ -54,20 +53,16 @@ if data:
         st.subheader("Compliance & Reporting Trends")
         col1, col2 = st.columns(2)
         
-        # FSI Plot with Target Line
+        # FSI Plot with 100% Target Line
         df_fsi = data["FSI"].dropna(subset=[data["FSI"].columns[4]])
-        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], 
-                          title="FSI % On Time", markers=True, text=df_fsi.columns[4])
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True)
         fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target (100%)")
-        fig_fsi.update_traces(textposition="top center")
         col1.plotly_chart(fig_fsi, use_container_width=True)
         
-        # CAPA Plot with Target Line
+        # CAPA Plot with 80% Target Line
         df_capa = data["CAPAs"].dropna(subset=[data["CAPAs"].columns[4]])
-        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], 
-                           title="CAPA % On Time", markers=True, text=df_capa.columns[4])
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True)
         fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target (80%)")
-        fig_capa.update_traces(textposition="top center")
         col2.plotly_chart(fig_capa, use_container_width=True)
 
     with tabs[2]: 
@@ -82,7 +77,6 @@ if data:
         c1.metric("Leadership Obs", len(data["Lead_Obs"]))
         c2.metric("GS Obs", len(data["GS_Obs"]))
         
-        # Adjust 'Auditor_Name' to match your actual column header in 'Safe Obs GS EHS'
         hseq_df = data["HSEQ_Obs"]
         hseq_filtered = hseq_df[hseq_df['Auditor_Name'] != 'Maddi'] if 'Auditor_Name' in hseq_df.columns else hseq_df
         c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_filtered))
