@@ -29,13 +29,13 @@ def load_all_data():
 data = load_all_data()
 df = data["Incidents"]
 
-# Ensure date formatting
+# Process Dates
 df['Date of Incident (UTC)'] = pd.to_datetime(df['Date of Incident (UTC)'])
 df['Year'] = df['Date of Incident (UTC)'].dt.year
 df['Week'] = df['Date of Incident (UTC)'].dt.isocalendar().week
 df_2026 = df[df['Year'] == 2026].copy()
 
-# 2. Risk Mitigation Tracker Logic
+# Risk Mapping
 def map_risk(status):
     if status in ['Completed On Time', 'Completed Late']: return 'Completed'
     if status in ['In Draft', 'In Review']: return 'In Progress'
@@ -49,15 +49,15 @@ counts = df['Cat'].value_counts()
 tabs = st.tabs(["Dashboard Overview", "Risk Mitigation", "Core Metrics", "Data Explorer"])
 
 with tabs[0]: # Dashboard Overview
+    # Top Level Metrics
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Incidents (2026)", len(df_2026))
     c2.metric("Avg Housekeeping", f"{data['Housekeeping']['Average Plant Score'].mean():.2%}")
     c3.metric("CAPA On-Time", f"{data['CAPAs']['% On Time'].mean():.2%}")
     c4.metric("Completed Risks", int(counts.get("Completed", 0)))
-    
     st.divider()
     
-    # New Operational Breakdown
+    # Operational Breakdown
     r1, r2, r3 = st.columns(3)
     with r1:
         st.subheader("Incident Count by Type")
@@ -66,7 +66,6 @@ with tabs[0]: # Dashboard Overview
         st.subheader("Safety Metrics")
         st.write(f"**Near Misses:** {len(df_2026[df_2026['Type'] == 'Near Miss'])}")
         st.write(f"**Visa Notifications:** {len(df_2026[df_2026['Type'] == 'Visa Notification'])}")
-        # Safe Observations Breakdown
         obs = data['Observations']
         st.write(f"**Safe Observations:**")
         st.write(f"- Leadership: {obs['Leadership'].sum()}")
@@ -78,25 +77,42 @@ with tabs[0]: # Dashboard Overview
         st.write(f"**Completed:** {int(counts.get('Completed', 0))}")
         st.write(f"**In Progress:** {int(counts.get('In Progress', 0))}")
         st.write(f"**Need More Info:** {int(counts.get('Need More Information', 0))}")
-
     st.divider()
-    
-    # Severity Graph with Target Line
+
+    # Severity Graph
     st.subheader("Incident Severity Trend (2026)")
-    severity_mapping = {'Property Damage': 25, 'First Aid': 75, 'Days Away From Work': 350, 'Recordable - Fatality': 600} # Add others as needed
+    severity_mapping = {'Property Damage': 25, 'First Aid': 75, 'Days Away From Work': 350, 'Recordable - Fatality': 600}
     df_2026['Points'] = df_2026['Injury Classification'].map(severity_mapping).fillna(0)
     weekly_scores = df_2026.groupby('Week')['Points'].sum().reindex(range(1, df_2026['Week'].max() + 1), fill_value=0)
 
-    fig, ax = plt.subplots(figsize=(14, 6))
-    ax.plot(weekly_scores.index, weekly_scores.values, color='black', marker='o', label='Weekly Total')
-    # Target Line at 400
+    fig, ax = plt.subplots(figsize=(12, 5))
+    ax.plot(weekly_scores.index, weekly_scores.values, color='black', marker='o', label='Severity Total')
     ax.axhline(y=400, color='r', linestyle='--', label='Target Line (400)')
-    # Data Labels
-    for i, v in enumerate(weekly_scores.values):
-        ax.text(i+1, v+10, str(int(v)), ha='center', fontsize=9)
+    for i, v in zip(weekly_scores.index, weekly_scores.values):
+        ax.text(i, v + 10, str(int(v)), ha='center', fontsize=9)
     ax.set_title('Incident Severity Graph (2026)')
     ax.legend()
     st.pyplot(fig)
 
 with tabs[1]: # Risk Mitigation Tracker
-    # ... (Keep your editable Risk Tracker code here)
+    st.subheader("Risk Mitigation Tracker")
+    edited_df = st.data_editor(
+        df[['Incident', 'Status', 'Department', 'Description']],
+        column_config={"Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Resolved in Place'])},
+        use_container_width=True
+    )
+    if st.button("Save Changes"):
+        try:
+            with pd.ExcelWriter(INCIDENT_PATH, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                edited_df.to_excel(writer, sheet_name='Incidents', index=False)
+            st.success("Changes saved!")
+        except Exception as e: st.error(f"Error: {e}")
+
+with tabs[2]: # Core Metrics
+    st.subheader("System Performance")
+    col_a, col_b = st.columns(2)
+    with col_a: st.plotly_chart(px.line(data["TCIR"], x='Month', y=['TCIR Actual', 'DART Actual'], title="TCIR & DART Trends"), use_container_width=True)
+    with col_b: st.plotly_chart(px.bar(data["CAPAs"], x=data["CAPAs"].columns[0], y='% On Time', title="CAPA Performance"), use_container_width=True)
+
+with tabs[3]: # Data Explorer
+    st.dataframe(data[st.selectbox("Select Excel Sheet", list(data.keys()))], use_container_width=True)
