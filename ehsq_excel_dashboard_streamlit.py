@@ -4,7 +4,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 
 # Page configuration
-st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
+st.set_page_config(layout="wide", page_title=" MT. HOLLY EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
 # File paths
