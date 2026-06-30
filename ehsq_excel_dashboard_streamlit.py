@@ -2,50 +2,98 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Page Configuration
-st.set_page_config(page_title="EHSQ Performance Dashboard", layout="wide")
-st.title("EHSQ Performance Dashboard - Mt. Holly")
+# Dashboard Setup
+st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
+st.title("EHSQ Performance Dashboard")
 
-# 2. Data Loading
 @st.cache_data
-def load_data():
-    # Loading the Excel file
-    df = pd.read_excel('IncidentReports_All_MTH_2026-06-25.xlsx', sheet_name='Sheet1')
-    # Clean headers to prevent KeyError
-    df.columns = df.columns.str.strip()
-    return df
+def load_all_data():
+    metrics_path = "EHSQ Metrics.xlsx"
+    incident_path = "IncidentReports_All_MTH_2026-06-25.xlsx"
+    
+    def clean_columns(df):
+        df.columns = df.columns.astype(str).str.strip()
+        return df
 
-try:
-    df = load_data()
+    try:
+        return {
+            "Incidents": clean_columns(pd.read_excel(incident_path, sheet_name="Sheet1")),
+            "FSI": clean_columns(pd.read_excel(metrics_path, sheet_name="FSI Reports", skiprows=1)),
+            "CAPAs": clean_columns(pd.read_excel(metrics_path, sheet_name="CAPAs", skiprows=1)),
+            "TCIR": clean_columns(pd.read_excel(metrics_path, sheet_name="TCIR and DART", skiprows=1))
+        }
+    except Exception as e:
+        st.error(f"Error loading files: {e}")
+        return None
 
-    # 3. Sidebar for Navigation
-    menu = ["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation", "Compliance & Reporting Trends"]
-    choice = st.sidebar.selectbox("Navigate", menu)
+data = load_all_data()
 
-    # 4. Content Logic
-    if choice == "Housekeeping":
-        st.header("Housekeeping Status")
-        hk_df = df[df['Type'] == 'Housekeeping']
+if data:
+    df = data["Incidents"]
+
+    # Define Tabs
+    tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
+
+    with tabs[0]: # Overview
+        st.subheader("Incident Breakdown")
+        col1, col2 = st.columns(2)
         
-        if not hk_df.empty:
-            # Using the corrected 'Status' column here
-            hk_data = hk_df.groupby(['Department', 'Status']).size().reset_index(name='Count')
-            fig = px.bar(hk_data, x='Status', y='Count', color='Department', barmode='group', title="Housekeeping by Department")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("No housekeeping data found.")
+        # Count by Type
+        type_counts = df.groupby('Type').size().reset_index(name='Count')
+        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto=True)
+        col1.plotly_chart(fig_type, use_container_width=True)
+        
+        # Categorization by Department
+        dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', 
+                         title="Incidents by Department & Type", barmode='group')
+        col2.plotly_chart(fig_dept, use_container_width=True)
 
-    elif choice == "Risk Mitigation":
-        st.header("Status on Risk Mitigation")
-        # Correctly using 'Status' here as well
-        risk_data = df['Status'].value_counts().reset_index()
-        risk_data.columns = ['Status', 'Count']
-        fig = px.pie(risk_data, values='Count', names='Status', title="Risk Mitigation Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+    with tabs[1]: # Compliance
+        st.subheader("Compliance & Reporting Trends")
+        col1, col2 = st.columns(2)
+        df_fsi = data["FSI"]
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True)
+        col1.plotly_chart(fig_fsi, use_container_width=True)
+        
+        df_capa = data["CAPAs"]
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True)
+        col2.plotly_chart(fig_capa, use_container_width=True)
 
-    # ... (Other sections follow the same logic)
-    else:
-        st.write(f"Section '{choice}' is under construction.")
+    with tabs[2]: # Housekeeping
+        st.subheader("Housekeeping Status by Department")
+        # Assuming 'Housekeeping' info is captured within 'Description' or a specific column
+        # If your data has a specific Housekeeping column, replace 'Department' below
+        hk_data = df.groupby(['Department', 'Status']).size().reset_index(name='Count')
+        fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', 
+                        barmode='group', title="Status Tracking by Department")
+        st.plotly_chart(fig_hk, use_container_width=True)
 
-except Exception as e:
-    st.error(f"An error occurred: {e}")
+    with tabs[3]: # Safe Observations
+        st.subheader("Safe Observations (Filtered)")
+        # Filtering where Type or Category might indicate an Observation
+        df_obs = df[df["Type"] == "Observation"]
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Leadership Obs", len(df_obs[df_obs["Reported By"] == "Leadership"]))
+        c2.metric("GS Obs", len(df_obs[df_obs["Reported By"] == "GS"]))
+        # Excluding Maddi
+        hseq_obs = df_obs[(df_obs["Reported By"] == "HSEQ") & (df_obs["Reported By"] != "Maddi")]
+        c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_obs))
+
+    with tabs[4]: # Risk Mitigation
+        st.subheader("Risk Mitigation Progress")
+        total_risk = len(df)
+        completed = len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])])
+        in_progress = len(df[df['Status'].isin(['In Draft', 'In Review'])])
+        need_info = total_risk - (completed + in_progress)
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total Risk Identified", total_risk)
+        m2.metric("Completed", completed)
+        m3.metric("In Progress", in_progress)
+        m4.metric("Need More Info", max(0, need_info))
+
+        st.divider()
+        st.write("### Data Explorer")
+        st.dataframe(df, use_container_width=True)
