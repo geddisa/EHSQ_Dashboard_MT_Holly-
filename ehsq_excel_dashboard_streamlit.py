@@ -86,15 +86,21 @@ if data:
         st.plotly_chart(fig_hk, use_container_width=True)
 
     with tabs[3]: # Safe Observations
-        st.subheader("Safe Observations (Filtered)")
-        df_obs = df[df["Type"] == "Observation"]
-        
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Leadership Obs", len(df_obs[df_obs["Reported By"] == "Leadership"]))
-        c2.metric("GS Obs", len(df_obs[df_obs["Reported By"] == "GS"]))
-        hseq_obs = df_obs[(df_obs["Reported By"] == "HSEQ") & (df_obs["Reported By"] != "Maddi")]
-        c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_obs))
-
+    st.subheader("Safe Observations Tracking")
+    
+    c1, c2, c3 = st.columns(3)
+    
+    # 1. Leadership
+    c1.metric("Leadership Obs", len(data["Lead_Obs"]))
+    
+    # 2. GS
+    c2.metric("GS Obs", len(data["GS_Obs"]))
+    
+    # 3. HSEQ (Filtering out 'Maddi')
+    # IMPORTANT: Ensure 'Auditor_Name' matches the actual header in your sheet
+    hseq_df = data["HSEQ_Obs"]
+    hseq_filtered = hseq_df[hseq_df['Auditor_Name'] != 'Maddi']
+    c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_filtered))
     with tabs[4]: # Risk Mitigation
         st.subheader("Risk Mitigation Progress")
         total_risk = len(df)
