@@ -36,19 +36,26 @@ if data:
 
     with tabs[0]: # Overview
         st.subheader("Incident Breakdown")
-        col1, col2 = st.columns(2)
         
         # Count by Type
         type_counts = df.groupby('Type').size().reset_index(name='Count')
         fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.2s')
-        col1.plotly_chart(fig_type, use_container_width=True)
+        st.plotly_chart(fig_type, use_container_width=True)
         
-        # Categorization by Department
+        st.divider() # Adds visual separation
+        
+        # Categorization by Department - Increased height for better readability
         dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', 
-                         title="Incidents by Department & Type", barmode='group', text_auto='.2s')
-        col2.plotly_chart(fig_dept, use_container_width=True)
-
+                         title="Incidents by Department & Type", 
+                         barmode='group', 
+                         text_auto='.2s',
+                         height=600) # Increased height to 600px
+        
+        # Further refinement for readability
+        fig_dept.update_layout(xaxis={'categoryorder':'total descending'})
+        st.plotly_chart(fig_dept, use_container_width=True)
+        
     with tabs[1]: # Compliance
         st.subheader("Compliance & Reporting Trends")
         col1, col2 = st.columns(2)
