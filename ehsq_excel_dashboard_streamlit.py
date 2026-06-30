@@ -36,23 +36,23 @@ if data:
 
     with tabs[0]: # Overview
         st.subheader("Incident Breakdown")
+        col1, col2 = st.columns(2)
         
-        # Count by Type
+        # Count by Type - text_auto='.0f' forces whole numbers
         type_counts = df.groupby('Type').size().reset_index(name='Count')
-        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.2s')
-        st.plotly_chart(fig_type, use_container_width=True)
+        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f')
+        col1.plotly_chart(fig_type, use_container_width=True)
         
-        st.divider() # Adds visual separation
+        st.divider() 
         
-        # Categorization by Department - Increased height for better readability
+        # Categorization by Department - text_auto='.0f' for whole numbers
         dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', 
                          title="Incidents by Department & Type", 
                          barmode='group', 
-                         text_auto='.0f',  # Forces integer formatting
+                         text_auto='.0f',
                          height=600)
         
-        # Sort by total incidents to improve readability
         fig_dept.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig_dept, use_container_width=True)
         
