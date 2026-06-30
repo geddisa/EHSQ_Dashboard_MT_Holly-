@@ -40,44 +40,45 @@ if data:
         
         # Count by Type
         type_counts = df.groupby('Type').size().reset_index(name='Count')
-        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto=True)
+        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.2s')
         col1.plotly_chart(fig_type, use_container_width=True)
         
         # Categorization by Department
         dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', 
-                         title="Incidents by Department & Type", barmode='group')
+                         title="Incidents by Department & Type", barmode='group', text_auto='.2s')
         col2.plotly_chart(fig_dept, use_container_width=True)
 
     with tabs[1]: # Compliance
         st.subheader("Compliance & Reporting Trends")
         col1, col2 = st.columns(2)
+        
         df_fsi = data["FSI"]
-        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True)
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", 
+                          markers=True, text=df_fsi.columns[4])
+        fig_fsi.update_traces(textposition="top center")
         col1.plotly_chart(fig_fsi, use_container_width=True)
         
         df_capa = data["CAPAs"]
-        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True)
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", 
+                           markers=True, text=df_capa.columns[4])
+        fig_capa.update_traces(textposition="top center")
         col2.plotly_chart(fig_capa, use_container_width=True)
 
     with tabs[2]: # Housekeeping
         st.subheader("Housekeeping Status by Department")
-        # Assuming 'Housekeeping' info is captured within 'Description' or a specific column
-        # If your data has a specific Housekeeping column, replace 'Department' below
         hk_data = df.groupby(['Department', 'Status']).size().reset_index(name='Count')
         fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', 
-                        barmode='group', title="Status Tracking by Department")
+                        barmode='group', title="Status Tracking by Department", text_auto='.2s')
         st.plotly_chart(fig_hk, use_container_width=True)
 
     with tabs[3]: # Safe Observations
         st.subheader("Safe Observations (Filtered)")
-        # Filtering where Type or Category might indicate an Observation
         df_obs = df[df["Type"] == "Observation"]
         
         c1, c2, c3 = st.columns(3)
         c1.metric("Leadership Obs", len(df_obs[df_obs["Reported By"] == "Leadership"]))
         c2.metric("GS Obs", len(df_obs[df_obs["Reported By"] == "GS"]))
-        # Excluding Maddi
         hseq_obs = df_obs[(df_obs["Reported By"] == "HSEQ") & (df_obs["Reported By"] != "Maddi")]
         c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_obs))
 
