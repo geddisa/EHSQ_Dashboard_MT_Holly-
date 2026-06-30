@@ -29,12 +29,10 @@ def load_all_data():
 data = load_all_data()
 df = data["Incidents"]
 
-# Ensure date formatting for 2026 analysis
+# Ensure date formatting
 df['Date of Incident (UTC)'] = pd.to_datetime(df['Date of Incident (UTC)'])
 df['Year'] = df['Date of Incident (UTC)'].dt.year
 df['Week'] = df['Date of Incident (UTC)'].dt.isocalendar().week
-
-# Filter specifically for 2026 data
 df_2026 = df[df['Year'] == 2026].copy()
 
 # 2. Risk Mitigation Tracker Logic
@@ -59,8 +57,7 @@ with tabs[0]: # Dashboard Overview
     
     st.divider()
     
-    # Recent Incidents 
-    st.subheader("Recent Incidents")
+    st.subheader("Recent Incidents (June 2026)")
     june_incidents = df_2026[df_2026['Date of Incident (UTC)'].dt.month == 6]
     if not june_incidents.empty:
         st.dataframe(june_incidents.sort_values(by='Date of Incident (UTC)', ascending=False), use_container_width=True)
@@ -69,7 +66,6 @@ with tabs[0]: # Dashboard Overview
     
     st.divider()
     
-    # Severity Graph (2026 Focused)
     st.subheader("Incident Severity Trend (2026)")
     severity_mapping = {
         'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
@@ -99,8 +95,32 @@ with tabs[1]: # Risk Mitigation Tracker
     b2.metric("In Progress", int(counts.get("In Progress", 0)))
     b3.metric("Resolved in Place", int(counts.get("Resolved in Place", 0)))
     b4.metric("Need More Info", int(counts.get("Need More Information", 0)))
+    
     st.divider()
-    st.dataframe(df[['Incident', 'Status', 'Department', 'Description']], use_container_width=True)
+    
+    # Editable Risk Tracker
+    editable_df = df[['Incident', 'Status', 'Department', 'Description']].copy()
+    edited_df = st.data_editor(
+        editable_df, 
+        column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status",
+                options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Resolved in Place'],
+                required=True,
+            )
+        },
+        use_container_width=True
+    )
+    
+    if st.button("Save Changes"):
+        try:
+            with pd.ExcelWriter(INCIDENT_PATH, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                # Replace 'Sheet1' with the actual sheet name in your file if different
+                edited_df.to_excel(writer, sheet_name='Sheet1', index=False)
+            st.success("Changes saved successfully!")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error saving changes: {e}")
 
 with tabs[2]: # Core Metrics
     st.subheader("System Performance Metrics")
