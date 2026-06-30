@@ -3,18 +3,19 @@ import pandas as pd
 import plotly.express as px
 import matplotlib.pyplot as plt
 
-st.set_page_config(layout="wide", page_title="EHSQ Dashboard")
+st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
-FILE_PATH = "EHSQ Metrics.xlsx"
+# Paths
 INCIDENT_PATH = "IncidentReports_All_MTH_2026-06-25.xlsx"
+FILE_PATH = "EHSQ Metrics.xlsx"
 
 @st.cache_data
 def load_all_data():
-    # Load Incidents directly
+    # Load Incidents
     incidents = pd.read_excel(INCIDENT_PATH)
-    # Debug: Display columns if you hit another error
-    # st.write("Incidents columns:", incidents.columns.tolist())
+    # Remove any accidental leading/trailing spaces in headers
+    incidents.columns = incidents.columns.str.strip()
     
     return {
         "Incidents": incidents,
@@ -28,7 +29,7 @@ def load_all_data():
 data = load_all_data()
 df = data["Incidents"]
 
-# Use the EXACT column name from your CSV metadata: 'Date of Incident (EDT)'
+# Now the column lookup will be much more resilient
 df['Date'] = pd.to_datetime(df['Date of Incident (EDT)'])
 df['Week'] = df['Date'].dt.isocalendar().week
 
@@ -41,19 +42,20 @@ def map_risk(status):
 df['Cat'] = df['Status'].apply(map_risk)
 counts = df['Cat'].value_counts()
 
-# --- Layout ---
+# --- Tabs ---
 tabs = st.tabs(["Overview", "Severity Graph", "KPI Visuals", "Data Explorer"])
 
-with tabs[0]: 
+with tabs[0]: # Dashboard Overview
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Incidents", len(df))
+    # Ensure column names match exactly what is in your Excel
     c2.metric("Avg Housekeeping", f"{data['Housekeeping']['Average Plant Score'].mean():.2%}")
     c3.metric("CAPA On-Time", f"{data['CAPAs']['% On Time'].mean():.2%}")
     c4.metric("Completed Risks", int(counts.get("Completed", 0)))
 
 with tabs[1]: # Severity Graph
     st.subheader("Incident Severity Trend (2026)")
-    # Using 'Classification ' (note the trailing space in your header)
+    # Using 'Classification ' as identified in your CSV metadata
     sev_map = dict(zip(data['Severity']['Classification '], data['Severity']['Points Assigned']))
     df['Points'] = df['Injury Classification'].map(sev_map).fillna(0)
     w_scores = df.groupby('Week')['Points'].sum().reindex(range(1, 25), fill_value=0)
@@ -73,11 +75,9 @@ with tabs[2]: # KPI Visuals
     col1, col2 = st.columns(2)
     with col1:
         st.plotly_chart(px.line(data["TCIR"], x='Month', y=['TCIR Actual', 'DART Actual'], title="TCIR & DART Trends", markers=True))
-        st.plotly_chart(px.bar(data["CAPAs"], x=data["CAPAs"].iloc[:,0], y='% On Time', title="CAPA Performance"))
     with col2:
         st.plotly_chart(px.bar(df['Type'].value_counts().reset_index(), x='Type', y='count', title="Incidents by Type"))
-        st.plotly_chart(px.bar(df['Hazard Type'].value_counts().reset_index(), x='Hazard Type', y='count', title="Incidents by Hazard"))
 
-with tabs[3]: 
+with tabs[3]: # Data Explorer
     sheet = st.selectbox("Select Data", list(data.keys()))
     st.dataframe(data[sheet], use_container_width=True)
