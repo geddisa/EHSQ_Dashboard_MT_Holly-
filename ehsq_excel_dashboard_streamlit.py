@@ -59,8 +59,8 @@ with tabs[0]: # Dashboard Overview
     
     st.divider()
     
-    # Recent Incidents (Filtered for June 2026)
-    st.subheader("Recent Incidents (June 2026)")
+    # Recent Incidents 
+    st.subheader("Recent Incidents")
     june_incidents = df_2026[df_2026['Date of Incident (UTC)'].dt.month == 6]
     if not june_incidents.empty:
         st.dataframe(june_incidents.sort_values(by='Date of Incident (UTC)', ascending=False), use_container_width=True)
