@@ -61,28 +61,27 @@ if data:
         col1, col2 = st.columns(2)
         
         # Helper to safely format percentages
-        def format_percentage(df, col_idx):
-            # Force conversion to numeric, turning non-numbers into NaN
-            series = pd.to_numeric(df.iloc[:, col_idx], errors='coerce')
-            # Create labels, handling NaN as empty string
-            return series.apply(lambda x: f"{x:.0f}" if pd.notnull(x) else "")
+        def get_clean_series(df, col_idx):
+            return pd.to_numeric(df.iloc[:, col_idx], errors='coerce')
 
         # FSI Chart
-        df_fsi = data["FSI"]
-        df_fsi['Label'] = format_percentage(df_fsi, 4)
-        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", 
-                          markers=True, text='Label')
-        fig_fsi.update_traces(textposition="top center")
+        df_fsi = data["FSI"].copy()
+        fsi_val = df_fsi.columns[4]
+        df_fsi['Label'] = get_clean_series(df_fsi, 4).apply(lambda x: f"{x:.0f}" if pd.notnull(x) else "")
+        
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=fsi_val, title="FSI % On Time")
+        fig_fsi.update_traces(mode='lines+markers+text', text=df_fsi['Label'], textposition="top center")
         col1.plotly_chart(fig_fsi, use_container_width=True)
         
         # CAPA Chart
-        df_capa = data["CAPAs"]
-        df_capa['Label'] = format_percentage(df_capa, 4)
-        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", 
-                           markers=True, text='Label')
-        fig_capa.update_traces(textposition="top center")
+        df_capa = data["CAPAs"].copy()
+        capa_val = df_capa.columns[4]
+        df_capa['Label'] = get_clean_series(df_capa, 4).apply(lambda x: f"{x:.0f}" if pd.notnull(x) else "")
+        
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=capa_val, title="CAPA % On Time")
+        fig_capa.update_traces(mode='lines+markers+text', text=df_capa['Label'], textposition="top center")
         col2.plotly_chart(fig_capa, use_container_width=True)
-
+        
     with tabs[2]: # Housekeeping
         st.subheader("Housekeeping Status by Department")
         hk_data = df.groupby(['Department', 'Status']).size().reset_index(name='Count')
