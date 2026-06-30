@@ -76,9 +76,13 @@ if data:
         
     with tabs[2]: # Housekeeping
         st.subheader("Housekeeping Status by Department")
+        # Ensure we are counting correctly and using integer labels
         hk_data = df.groupby(['Department', 'Status']).size().reset_index(name='Count')
+        
+        # text_auto='.0f' forces the data labels to be whole numbers
         fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', 
-                        barmode='group', title="Status Tracking by Department", text_auto='.2s')
+                        barmode='group', title="Status Tracking by Department", text_auto='.0f')
+        
         st.plotly_chart(fig_hk, use_container_width=True)
 
     with tabs[3]: # Safe Observations
