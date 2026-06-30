@@ -60,26 +60,18 @@ if data:
         st.subheader("Compliance & Reporting Trends")
         col1, col2 = st.columns(2)
         
-        # Helper to safely format percentages
-        def get_clean_series(df, col_idx):
-            return pd.to_numeric(df.iloc[:, col_idx], errors='coerce')
-
-        # FSI Chart
-        df_fsi = data["FSI"].copy()
-        fsi_val = df_fsi.columns[4]
-        df_fsi['Label'] = get_clean_series(df_fsi, 4).apply(lambda x: f"{x:.0f}" if pd.notnull(x) else "")
-        
-        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=fsi_val, title="FSI % On Time")
-        fig_fsi.update_traces(mode='lines+markers+text', text=df_fsi['Label'], textposition="top center")
+        # FSI % On Time - Original state
+        df_fsi = data["FSI"]
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", 
+                          markers=True, text=df_fsi.columns[4])
+        fig_fsi.update_traces(textposition="top center")
         col1.plotly_chart(fig_fsi, use_container_width=True)
         
-        # CAPA Chart
-        df_capa = data["CAPAs"].copy()
-        capa_val = df_capa.columns[4]
-        df_capa['Label'] = get_clean_series(df_capa, 4).apply(lambda x: f"{x:.0f}" if pd.notnull(x) else "")
-        
-        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=capa_val, title="CAPA % On Time")
-        fig_capa.update_traces(mode='lines+markers+text', text=df_capa['Label'], textposition="top center")
+        # CAPA % On Time - Original state
+        df_capa = data["CAPAs"]
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", 
+                           markers=True, text=df_capa.columns[4])
+        fig_capa.update_traces(textposition="top center")
         col2.plotly_chart(fig_capa, use_container_width=True)
         
     with tabs[2]: # Housekeeping
