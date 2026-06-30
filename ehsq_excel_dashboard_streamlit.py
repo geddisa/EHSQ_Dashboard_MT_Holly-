@@ -53,13 +53,20 @@ if data:
     with tabs[1]: 
         st.subheader("Compliance & Reporting Trends")
         col1, col2 = st.columns(2)
-        df_fsi = data["FSI"]
-        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True, text=df_fsi.columns[4])
+        
+        # FSI Plot with Target Line
+        df_fsi = data["FSI"].dropna(subset=[data["FSI"].columns[4]])
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], 
+                          title="FSI % On Time", markers=True, text=df_fsi.columns[4])
+        fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target (100%)")
         fig_fsi.update_traces(textposition="top center")
         col1.plotly_chart(fig_fsi, use_container_width=True)
         
-        df_capa = data["CAPAs"]
-        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True, text=df_capa.columns[4])
+        # CAPA Plot with Target Line
+        df_capa = data["CAPAs"].dropna(subset=[data["CAPAs"].columns[4]])
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], 
+                           title="CAPA % On Time", markers=True, text=df_capa.columns[4])
+        fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target (80%)")
         fig_capa.update_traces(textposition="top center")
         col2.plotly_chart(fig_capa, use_container_width=True)
 
