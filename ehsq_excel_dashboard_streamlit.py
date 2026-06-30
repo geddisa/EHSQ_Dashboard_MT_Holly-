@@ -49,10 +49,10 @@ if data:
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', 
                          title="Incidents by Department & Type", 
                          barmode='group', 
-                         text_auto='.2s',
-                         height=600) # Increased height to 600px
+                         text_auto='.0f',  # Forces integer formatting
+                         height=600)
         
-        # Further refinement for readability
+        # Sort by total incidents to improve readability
         fig_dept.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig_dept, use_container_width=True)
         
