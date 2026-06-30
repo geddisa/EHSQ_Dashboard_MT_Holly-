@@ -29,6 +29,10 @@ def load_all_data():
 data = load_all_data()
 df = data["Incidents"]
 
+# Prepare Date/Week for analysis
+df['Date of Incident (UTC)'] = pd.to_datetime(df['Date of Incident (UTC)'])
+df['Week'] = df['Date of Incident (UTC)'].dt.isocalendar().week
+
 # 2. Risk Mitigation Tracker Logic
 def map_risk(status):
     if status in ['Completed On Time', 'Completed Late']: return 'Completed'
@@ -51,34 +55,55 @@ with tabs[0]: # Dashboard Overview
     
     st.divider()
     
-    # Severity Graph Integration
-    st.subheader("Incident Severity Trend")
-    df['Date of Incident (UTC)'] = pd.to_datetime(df['Date of Incident (UTC)'])
-    df['Week'] = df['Date of Incident (UTC)'].dt.isocalendar().week
+    # Recent Incidents
+    st.subheader("Recent Incidents")
+    st.dataframe(df.tail(5), use_container_width=True)
     
+    st.divider()
+    
+    # Severity Graph
+    st.subheader("Incident Severity Trend")
     severity_mapping = {
         'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
         'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
         'Other Recordable Case': 250, 'Restricted or Transferred Work': 250,
         'Days Away From Work': 350, 'Recordable - Fatality': 600 
     }
-    
     df['Points'] = df['Injury Classification'].map(severity_mapping).fillna(df['Type'].map(severity_mapping)).fillna(0)
-    weekly_scores = df.groupby('Week')['Points'].sum()
-    current_week = df['Week'].max()
-    weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
+    weekly_scores = df.groupby('Week')['Points'].sum().reindex(range(1, df['Week'].max() + 1), fill_value=0)
 
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (0-400)')
     ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (401-800)')
     ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (800+)')
-    
-    ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Severity Total')
+    ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Weekly Severity Total')
     ax.set_title('Incident Severity Graph')
     ax.set_xlabel('Calendar Week Number')
     ax.set_ylabel('Total Accumulated Severity Points')
+    ax.set_xticks(range(1, df['Week'].max() + 1))
     ax.legend(loc='upper left')
-    
     st.pyplot(fig)
 
-# Other tabs (1, 2, 3) remain as you defined them in your script...
+with tabs[1]: # Risk Mitigation Tracker
+    st.subheader("Risk Mitigation Tracker")
+    b1, b2, b3, b4 = st.columns(4)
+    b1.metric("Completed", int(counts.get("Completed", 0)))
+    b2.metric("In Progress", int(counts.get("In Progress", 0)))
+    b3.metric("Resolved in Place", int(counts.get("Resolved in Place", 0)))
+    b4.metric("Need More Info", int(counts.get("Need More Information", 0)))
+    st.divider()
+    st.dataframe(df[['Incident', 'Status', 'Department', 'Description']], use_container_width=True)
+
+with tabs[2]: # Core Metrics
+    st.subheader("System Performance Metrics")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        fig1 = px.line(data["TCIR"], x='Month', y=['TCIR Actual', 'DART Actual'], title="TCIR & DART Trends", markers=True)
+        st.plotly_chart(fig1, use_container_width=True)
+    with col_b:
+        fig2 = px.bar(data["CAPAs"], x=data["CAPAs"].columns[0], y='% On Time', title="CAPA On-Time Performance")
+        st.plotly_chart(fig2, use_container_width=True)
+
+with tabs[3]: # Data Explorer
+    selected = st.selectbox("Select Excel Sheet", list(data.keys()))
+    st.dataframe(data[selected], use_container_width=True)
