@@ -9,62 +9,50 @@ st.title("EHSQ Performance Dashboard - Mt. Holly")
 # 2. Data Loading
 @st.cache_data
 def load_data():
-    # Loading the Excel file directly
     file_path = 'IncidentReports_All_MTH_2026-06-25.xlsx'
-    # 'sheet_name=0' loads the first sheet by default
-    df = pd.read_excel(file_path, sheet_name=0)
+    df = pd.read_excel(file_path, sheet_name='Sheet1')
     df.columns = df.columns.str.strip()
     return df
 
-try:
-    df = load_data()
+df = load_data()
 
-    # 3. Sidebar Navigation
-    menu = ["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation", "Incident Breakdown"]
-    choice = st.sidebar.selectbox("Navigate", menu)
+# 3. Layout: Three-column dashboard
+row1 = st.columns(2)
+row2 = st.columns(2)
 
-    # 4. Content Logic
-    if choice == "Housekeeping":
-        st.header("Housekeeping Status")
-        # Filter for rows where Type is 'Housekeeping'
-        hk_df = df[df['Type'] == 'Housekeeping']
-        
-        if not hk_df.empty:
-            hk_data = hk_df.groupby(['Location', 'Status']).size().reset_index(name='Count')
-            fig = px.bar(hk_data, x='Status', y='Count', color='Location', barmode='group', title="Housekeeping by Location")
-            st.plotly_chart(fig)
-        else:
-            st.warning("No housekeeping data found.")
-
-    elif choice == "Incident Breakdown":
-        st.header("Incident Breakdown")
-        incident_counts = df.groupby(['Type', 'Location']).size().reset_index(name='Count')
-        fig = px.sunburst(incident_counts, path=['Type', 'Location'], values='Count')
-        st.plotly_chart(fig)
-
-    elif choice == "Safe Observations":
-        st.header("Safe Observations")
-        # Filtering for the 3 groups
-        groups = ['Leadership', 'GS', 'HSEQ']
-        for group in groups:
-            group_df = df[df['Reported By'].str.contains(group, na=False)]
-            st.subheader(f"Observations: {group}")
-            if not group_df.empty:
-                st.bar_chart(group_df['Status'].value_counts())
-            else:
-                st.write(f"No records found for {group}")
-
-    elif choice == "Risk Mitigation":
-        st.header("Status on Risk Mitigation")
-        risk_data = df['Status'].value_counts().reset_index()
-        risk_data.columns = ['Status', 'Count']
-        fig = px.pie(risk_data, values='Count', names='Status', title="Risk Mitigation Distribution")
-        st.plotly_chart(fig)
-
+# --- SECTION: Housekeeping ---
+with row1[0]:
+    st.subheader("Housekeeping Status")
+    hk_df = df[df['Type'] == 'Housekeeping']
+    if not hk_df.empty:
+        hk_data = hk_df.groupby(['Location', 'Status']).size().reset_index(name='Count')
+        fig = px.bar(hk_data, x='Status', y='Count', color='Location', title="Housekeeping by Location")
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.write("Select a section from the sidebar to view metrics.")
+        st.write("No housekeeping data available.")
 
-except FileNotFoundError:
-    st.error("Error: The file 'IncidentReports_All_MTH_2026-06-25.xlsx' was not found. Please ensure it is in the same folder as this script.")
-except Exception as e:
-    st.error(f"An error occurred: {e}")
+# --- SECTION: Risk Mitigation ---
+with row1[1]:
+    st.subheader("Risk Mitigation Status")
+    risk_data = df['Status'].value_counts().reset_index()
+    risk_data.columns = ['Status', 'Count']
+    fig = px.pie(risk_data, values='Count', names='Status', title="Risk Distribution")
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- SECTION: Incident Breakdown ---
+with row2[0]:
+    st.subheader("Incident Breakdown")
+    incident_counts = df.groupby(['Type', 'Location']).size().reset_index(name='Count')
+    fig = px.sunburst(incident_counts, path=['Type', 'Location'], values='Count')
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- SECTION: Safe Observations ---
+with row2[1]:
+    st.subheader("Safe Observations")
+    # Dynamically show charts for the requested groups
+    groups = ['Leadership', 'GS', 'HSEQ']
+    for group in groups:
+        group_df = df[df['Reported By'].str.contains(group, na=False)]
+        if not group_df.empty:
+            st.write(f"**{group}**")
+            st.bar_chart(group_df['Status'].value_counts())
