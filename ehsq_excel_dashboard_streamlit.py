@@ -29,9 +29,13 @@ def load_all_data():
 data = load_all_data()
 df = data["Incidents"]
 
-# Prepare Date/Week for analysis
+# Ensure date formatting for 2026 analysis
 df['Date of Incident (UTC)'] = pd.to_datetime(df['Date of Incident (UTC)'])
+df['Year'] = df['Date of Incident (UTC)'].dt.year
 df['Week'] = df['Date of Incident (UTC)'].dt.isocalendar().week
+
+# Filter specifically for 2026 data
+df_2026 = df[df['Year'] == 2026].copy()
 
 # 2. Risk Mitigation Tracker Logic
 def map_risk(status):
@@ -48,39 +52,43 @@ tabs = st.tabs(["Dashboard Overview", "Risk Mitigation", "Core Metrics", "Data E
 
 with tabs[0]: # Dashboard Overview
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Incidents", len(df))
+    c1.metric("Total Incidents (2026)", len(df_2026))
     c2.metric("Avg Housekeeping", f"{data['Housekeeping']['Average Plant Score'].mean():.2%}")
     c3.metric("CAPA On-Time", f"{data['CAPAs']['% On Time'].mean():.2%}")
     c4.metric("Completed Risks", int(counts.get("Completed", 0)))
     
     st.divider()
     
-    # Recent Incidents
-    st.subheader("Recent Incidents")
-    st.dataframe(df.tail(5), use_container_width=True)
+    # Recent Incidents (Filtered for June 2026)
+    st.subheader("Recent Incidents (June 2026)")
+    june_incidents = df_2026[df_2026['Date of Incident (UTC)'].dt.month == 6]
+    if not june_incidents.empty:
+        st.dataframe(june_incidents.sort_values(by='Date of Incident (UTC)', ascending=False), use_container_width=True)
+    else:
+        st.info("No incidents recorded for June 2026.")
     
     st.divider()
     
-    # Severity Graph
-    st.subheader("Incident Severity Trend")
+    # Severity Graph (2026 Focused)
+    st.subheader("Incident Severity Trend (2026)")
     severity_mapping = {
         'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
         'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
         'Other Recordable Case': 250, 'Restricted or Transferred Work': 250,
         'Days Away From Work': 350, 'Recordable - Fatality': 600 
     }
-    df['Points'] = df['Injury Classification'].map(severity_mapping).fillna(df['Type'].map(severity_mapping)).fillna(0)
-    weekly_scores = df.groupby('Week')['Points'].sum().reindex(range(1, df['Week'].max() + 1), fill_value=0)
+    df_2026['Points'] = df_2026['Injury Classification'].map(severity_mapping).fillna(df_2026['Type'].map(severity_mapping)).fillna(0)
+    weekly_scores = df_2026.groupby('Week')['Points'].sum().reindex(range(1, df_2026['Week'].max() + 1), fill_value=0)
 
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (0-400)')
     ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (401-800)')
     ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (800+)')
     ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Weekly Severity Total')
-    ax.set_title('Incident Severity Graph')
+    ax.set_title('Incident Severity Graph (2026)')
     ax.set_xlabel('Calendar Week Number')
     ax.set_ylabel('Total Accumulated Severity Points')
-    ax.set_xticks(range(1, df['Week'].max() + 1))
+    ax.set_xticks(range(1, df_2026['Week'].max() + 1))
     ax.legend(loc='upper left')
     st.pyplot(fig)
 
