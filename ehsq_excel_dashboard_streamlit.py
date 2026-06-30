@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Page Config
+# Dashboard Setup
 st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
-# 2. Data Loading with cleaning
 @st.cache_data
 def load_all_data():
     metrics_path = "EHSQ Metrics.xlsx"
@@ -27,7 +26,6 @@ def load_all_data():
 
 data = load_all_data()
 
-# 3. Layout
 tabs = st.tabs(["Overview", "Compliance & Reporting", "Performance Trends", "Data Explorer"])
 
 with tabs[0]:
@@ -36,28 +34,34 @@ with tabs[0]:
     
     st.write("### Environmental Compliance Issues")
     df_env = data["Environmental"]
-    # Using positional indexing to prevent ValueError
     fig_env = px.bar(df_env.dropna(subset=[df_env.columns[1]]), 
                      x=df_env.columns[0], y=df_env.columns[1], title="Issues by Month")
+    # Added data labels:
+    fig_env.update_traces(texttemplate='%{y:.0f}', textposition='outside')
     st.plotly_chart(fig_env, use_container_width=True)
 
 with tabs[1]:
     st.subheader("Compliance & Reporting Trends")
     col1, col2 = st.columns(2)
     
-    # FSI Chart
+    # FSI Chart with labels
     df_fsi = data["FSI"]
-    col1.plotly_chart(px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time"), use_container_width=True)
+    fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True)
+    fig_fsi.update_traces(texttemplate='%{y:.2f}', textposition='top center')
+    col1.plotly_chart(fig_fsi, use_container_width=True)
     
-    # CAPA Chart
+    # CAPA Chart with labels
     df_capa = data["CAPAs"]
-    col2.plotly_chart(px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time"), use_container_width=True)
+    fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True)
+    fig_capa.update_traces(texttemplate='%{y:.2f}', textposition='top center')
+    col2.plotly_chart(fig_capa, use_container_width=True)
 
 with tabs[2]:
     st.subheader("Performance Trends (TCIR & DART)")
     df_tcir = data["TCIR"]
-    # Ensure column names match your Excel headers exactly
     fig_perf = px.line(df_tcir, x="Month", y=["TCIR Actual", "DART Actual"], markers=True, title="Safety Performance Trend")
+    # Labels for multi-line charts
+    fig_perf.update_traces(texttemplate='%{y:.2f}', textposition='top center')
     st.plotly_chart(fig_perf, use_container_width=True)
 
 with tabs[3]:
