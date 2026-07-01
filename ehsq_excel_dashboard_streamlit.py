@@ -1,8 +1,3 @@
-Here is the updated code. I added the `text` parameter to the `px.line()` functions for both the FSI and CAPA charts and used `fig.update_traces(textposition="top center")` to make sure the data labels float cleanly above each data point.
-
-Here is the complete, updated script:
-
-```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -161,5 +156,3 @@ if data:
             hide_index=True,
             use_container_width=True
         )
-
-```
