@@ -82,7 +82,21 @@ if data:
     with tabs[2]: 
         st.subheader("Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        st.plotly_chart(px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', text_auto='.0f'), width='stretch')
+        
+        # Create the figure
+        fig = px.bar(
+            hk_data, 
+            x='Department', 
+            y='Count', 
+            color='Status', 
+            barmode='group', 
+            text='Count' # Set the text explicitly to 'Count'
+        )
+        
+        # textangle=0 forces the labels to stand horizontally
+        fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)
+        
+        st.plotly_chart(fig, width='stretch')
 
     with tabs[3]: 
         st.subheader("Safe Observations Tracking")
