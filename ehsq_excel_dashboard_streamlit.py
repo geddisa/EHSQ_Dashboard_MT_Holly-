@@ -41,13 +41,13 @@ if data:
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
 
     with tabs[0]: 
-        st.subheader("2026 Incident Breakdown")
+        st.subheader("Incident Breakdown")
         col1, col2 = st.columns(2)
         type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
-        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type"), width='stretch')
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type"), width='stretch')
         
         dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
-        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="2026 Incidents by Department")
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department")
         st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[1]: 
