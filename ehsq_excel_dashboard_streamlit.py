@@ -83,14 +83,31 @@ if data:
 
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
+        
+        # Calculate values
         total_risk = len(df)
         completed = len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df[df['Status'].isin(['In Draft', 'In Review'])])
-        need_info = total_risk - (completed + in_progress)
+        need_info = max(0, total_risk - (completed + in_progress))
+
+        # Helper to create custom metric-like display
+        def display_custom_metric(label, value, color):
+            st.markdown(
+                f"""
+                <div style="border: 1px solid #e6e6e6; padding: 10px; border-radius: 5px; text-align: center;">
+                    <div style="font-size: 0.9rem; color: #808495; margin-bottom: 5px;">{label}</div>
+                    <div style="font-size: 2rem; font-weight: 600; color: {color};">{value}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Risk Identified", total_risk)
-        m2.metric("Completed", completed)
-        m3.metric("In Progress", in_progress)
-        m4.metric("Need More Info", max(0, need_info))
+        
+        with m1: display_custom_metric("Total Risk Identified", total_risk, "#0000FF") # 256 Blue
+        with m2: display_custom_metric("Completed", completed, "#008000")             # 247 Green
+        with m3: display_custom_metric("In Progress", in_progress, "#FFD700")         # 5 Yellow
+        with m4: display_custom_metric("Need More Info", need_info, "#FF0000")        # 4 Red
+        
         st.divider()
         st.dataframe(df, use_container_width=True)
