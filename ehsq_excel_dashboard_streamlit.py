@@ -83,10 +83,11 @@ with tabs[1]:
         y=fsi_df.columns[4], 
         title="FSI % On Time", 
         markers=True,
-        text=fsi_df.columns[4] # Use the Y-axis column for labels
+        text=fsi_df.columns[4]
     )
-    # Format labels as whole number percentages
     fig_fsi.update_traces(texttemplate='%{text:.0%}', textposition='top center')
+    # Update Y-axis to show whole number percentages
+    fig_fsi.update_yaxes(tickformat=".0%")
     fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
     c1.plotly_chart(fig_fsi, use_container_width=True)
     
@@ -98,13 +99,14 @@ with tabs[1]:
         y=capa_df.columns[4], 
         title="CAPA % On Time", 
         markers=True,
-        text=capa_df.columns[4] # Use the Y-axis column for labels
+        text=capa_df.columns[4]
     )
-    # Format labels as whole number percentages
     fig_capa.update_traces(texttemplate='%{text:.0%}', textposition='top center')
+    # Update Y-axis to show whole number percentages
+    fig_capa.update_yaxes(tickformat=".0%")
     fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
     c2.plotly_chart(fig_capa, use_container_width=True)
-
+    
 with tabs[2]: 
     st.subheader("Housekeeping Status")
     hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
