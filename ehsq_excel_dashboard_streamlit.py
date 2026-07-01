@@ -78,6 +78,8 @@ if data:
         
         st.divider()
         st.subheader("Incident Severity Analysis")
+        
+        # ... (Data processing logic remains the same) ...
         df_severity = df_raw.copy()
         df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
         
@@ -96,17 +98,23 @@ if data:
         weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
 
         fig, ax = plt.subplots(figsize=(14, 6))
-        ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (0-400)')
-        ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (401-800)')
-        ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (800+)')
         
-        ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Severity Total')
+        # Risk Zones with clear labels
+        ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (Green: 0-400)')
+        ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (Yellow: 401-800)')
+        ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (Red: 800+)')
+        
+        ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Weekly Total')
+        
         ax.set_title('Incident Severity Graph')
         ax.set_xlabel('Calendar Week Number')
         ax.set_ylabel('Points')
         ax.set_xticks(range(1, current_week + 1))
+        
+        # Adds the legend to the plot so users see the color/risk mapping
+        ax.legend(loc='upper left', frameon=True)
+        
         st.pyplot(fig)
-
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
         total_risk = len(df_raw)
