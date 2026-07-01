@@ -110,7 +110,7 @@ if data:
         with m4: display_custom_metric("Need More Info", need_info, "#FF0000")
         
         st.divider()
-        st.write("### Edit Incident Status")
+        st.write("### Incidents")
         
         # Define the dropdown options
         status_options = ['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info']
