@@ -74,17 +74,27 @@ if data:
 
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress (All Data)")
+        
         # Calculated from df_raw (All Time)
         total_risk = len(df_raw)
         completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
         need_info = max(0, total_risk - (completed + in_progress))
         
+        # Custom function to apply colors
+        def colored_metric(label, value, color):
+            st.markdown(f"""
+                <div style="background-color: #f8f9fa; padding: 10px; border-radius: 10px; border-left: 5px solid {color}; text-align: center;">
+                    <h4 style="margin: 0; color: #555;">{label}</h4>
+                    <h2 style="margin: 0; color: {color};">{value}</h2>
+                </div>
+            """, unsafe_allow_html=True)
+
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Risk (All)", total_risk)
-        m2.metric("Completed", completed)
-        m3.metric("In Progress", in_progress)
-        m4.metric("Need More Info", need_info)
+        with m1: colored_metric("Total Risk (All)", total_risk, "blue")
+        with m2: colored_metric("Completed", completed, "green")
+        with m3: colored_metric("In Progress", in_progress, "orange") # Using orange for visibility as yellow can be hard to read
+        with m4: colored_metric("Need More Info", need_info, "red")
         
         st.divider()
         st.data_editor(
