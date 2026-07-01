@@ -35,8 +35,11 @@ data = load_all_data()
 
 if data:
     df = data["Incidents"]
-    # Ensure Date column is datetime
-    df['Date'] = pd.to_datetime(df.iloc[:, 0]) 
+    
+    # FIX: Robust date parsing
+    # Use errors='coerce' to turn bad data into NaT, then drop those rows
+    df['Date'] = pd.to_datetime(df.iloc[:, 0], errors='coerce')
+    df = df.dropna(subset=['Date']) 
     df['Week'] = df['Date'].dt.isocalendar().week
 
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
@@ -44,7 +47,6 @@ if data:
     with tabs[0]: 
         st.subheader("Incident Severity Tracking")
         
-        # Severity Calculation
         severity_mapping = {
             'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
             'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
@@ -118,5 +120,7 @@ if data:
         with m4: display_custom_metric("Need More Info", need_info, "#FF0000")
         
         st.divider()
-        st.write("### Incidents")
-        df_edit = st.data_editor
+        st.write("### Edit Incident Status")
+        df_edit = st.data_editor(df, column_config={
+            "Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True)
+        }, hide_index=True, use_container_width=True)
