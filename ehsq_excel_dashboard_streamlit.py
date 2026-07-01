@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go 
 
 # --- DASHBOARD SETUP ---
 st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
