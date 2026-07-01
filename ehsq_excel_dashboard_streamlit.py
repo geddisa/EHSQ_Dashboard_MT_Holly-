@@ -46,18 +46,12 @@ if data:
         
         type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
         
-        # Create the bar chart
+        # Create the bar chart with text enabled
         fig = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text='Count')
         
-        # Update traces to set text orientation to vertical (90 degrees)
+        # Setting textangle to 0 makes all labels stand up (horizontal)
         fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0) 
-        # Note: If you want all text vertical, set textangle=-90. 
-        # For specific control over just the '2', we apply this:
-        fig.update_traces(textangle=0) # Keeps them horizontal. 
         
-        # To specifically rotate them, use:
-        fig.update_traces(textangle=-90) # This will make all labels vertical.
-
         col1.plotly_chart(fig, width='stretch')
 
     with tabs[1]: 
