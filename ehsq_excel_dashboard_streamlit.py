@@ -119,4 +119,36 @@ if data:
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
         fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', text='Count')
         fig_hk.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)
-        st.plotly_chart(fig_hk, use_container_width=True
+        # Closing parenthesis is secured here
+        st.plotly_chart(fig_hk, use_container_width=True)
+
+    # --- TAB 3: SAFE OBSERVATIONS ---
+    with tabs[3]: 
+        st.subheader("Safe Observations Tracking")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Leadership Obs", len(data["Lead_Obs"]))
+        c2.metric("GS Obs", len(data["GS_Obs"]))
+        c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
+        
+    # --- TAB 4: RISK MITIGATION ---
+    with tabs[4]: 
+        st.subheader("Risk Mitigation Progress")
+        total_risk = len(df_raw)
+        completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
+        in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
+        need_info = max(0, total_risk - (completed + in_progress))
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total Risk", total_risk)
+        m2.metric("Completed", completed)
+        m3.metric("In Progress", in_progress)
+        m4.metric("Need More Info", need_info)
+        
+        st.divider()
+        st.data_editor(df_raw, column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status", 
+                options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
+                required=True
+            )
+        }, hide_index=True, use_container_width=True)
