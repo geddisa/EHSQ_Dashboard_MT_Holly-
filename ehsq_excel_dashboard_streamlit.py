@@ -67,6 +67,11 @@ if data:
         fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
         fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
         c2.plotly_chart(fig_capa, width='stretch')
+        
+        dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count')
+        fig_dept.update_traces(textangle=0, textposition='outside')
+        st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[2]: 
         st.subheader("Housekeeping Status")
