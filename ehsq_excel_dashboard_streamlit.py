@@ -12,8 +12,7 @@ try:
         st.image("Company_Logo.png", width=200)
     with col_title:
         st.title("EHSQ KPI Dashboard")
-except Exception:
-st.title("Century Aluminum | Mt. Holly | EHSQ KPI Dashboard")
+
 
 @st.cache_data
 def load_all_data():
