@@ -9,16 +9,18 @@ st.title("EHSQ Performance Dashboard")
 
 @st.cache_data
 def load_all_data():
-    # Corrected: Using read_excel for your Excel file
     incident_path = "IncidentReports_All_MTH_2026-06-25.xlsx"
+    metrics_path = "EHSQ Metrics.xlsx"
+    audit_path = "Audit Schedule - Internal - LPA.xlsx"
+    
     try:
         return {
             "Incidents": pd.read_excel(incident_path, sheet_name="Sheet1"),
-            "FSI": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="FSI Reports", skiprows=1),
-            "CAPAs": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="CAPAs", skiprows=1),
-            "Lead_Obs": pd.read_excel("Audit Schedule - Internal - LPA.xlsx", sheet_name="Safe Obs - Leadership"),
-            "GS_Obs": pd.read_excel("Audit Schedule - Internal - LPA.xlsx", sheet_name="Safe Obs - GS and EHS"),
-            "HSEQ_Obs": pd.read_excel("Audit Schedule - Internal - LPA.xlsx", sheet_name="Safe Obs GS EHS")
+            "FSI": pd.read_excel(metrics_path, sheet_name="FSI Reports", skiprows=1),
+            "CAPAs": pd.read_excel(metrics_path, sheet_name="CAPAs", skiprows=1),
+            "Lead_Obs": pd.read_excel(audit_path, sheet_name="Safe Obs - Leadership"),
+            "GS_Obs": pd.read_excel(audit_path, sheet_name="Safe Obs - GS and EHS"),
+            "HSEQ_Obs": pd.read_excel(audit_path, sheet_name="Safe Obs GS EHS")
         }
     except Exception as e:
         st.error(f"Error loading files: {e}")
@@ -42,22 +44,26 @@ if data:
         st.subheader("2026 Incident Breakdown")
         col1, col2 = st.columns(2)
         type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
-        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type"), use_container_width=True)
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type"), width='stretch')
         
         dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="2026 Incidents by Department")
-        st.plotly_chart(fig_dept, use_container_width=True)
+        st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[1]: 
         st.subheader("Compliance & Reporting Trends")
         c1, c2 = st.columns(2)
-        c1.plotly_chart(px.line(data["FSI"], title="FSI % On Time"), use_container_width=True)
-        c2.plotly_chart(px.line(data["CAPAs"], title="CAPA % On Time"), use_container_width=True)
+        # Fix: Explicitly select X and Y columns to avoid "wide-form" data errors
+        fsi_df = data["FSI"]
+        c1.plotly_chart(px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time"), width='stretch')
+        
+        capa_df = data["CAPAs"]
+        c2.plotly_chart(px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time"), width='stretch')
 
     with tabs[2]: 
         st.subheader("2026 Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        st.plotly_chart(px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group'), use_container_width=True)
+        st.plotly_chart(px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group'), width='stretch')
 
     with tabs[3]: 
         st.subheader("Safe Observations Tracking")
@@ -91,5 +97,5 @@ if data:
                 )
             }, 
             hide_index=True, 
-            use_container_width=True
+            width='stretch'
         )
