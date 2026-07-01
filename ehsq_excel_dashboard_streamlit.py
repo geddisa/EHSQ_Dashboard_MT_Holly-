@@ -6,6 +6,13 @@ import matplotlib.pyplot as plt
 
 # Dashboard Setup
 st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
+try:
+    col_logo, col_title = st.columns([1, 6])
+    with col_logo:
+        st.image("Company_Logo.png", width=200)
+    with col_title:
+        st.title("EHSQ KPI Dashboard")
+except Exception:
 st.title("Century Aluminum | Mt. Holly | EHSQ KPI Dashboard")
 
 @st.cache_data
