@@ -3,12 +3,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+# Dashboard Setup
 st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
 @st.cache_data
 def load_all_data():
-    # Ensure these paths are correct for your environment
     metrics_path = "EHSQ Metrics.xlsx"
     incident_path = "IncidentReports_All_MTH_2026-06-25.xlsx"
     audit_path = "Audit Schedule - Internal - LPA.xlsx"
@@ -22,9 +22,10 @@ def load_all_data():
             "Incidents": clean_columns(pd.read_excel(incident_path, sheet_name="Sheet1")),
             "FSI": clean_columns(pd.read_excel(metrics_path, sheet_name="FSI Reports", skiprows=1)),
             "CAPAs": clean_columns(pd.read_excel(metrics_path, sheet_name="CAPAs", skiprows=1)),
-            "HSEQ_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs GS EHS")),
+            "TCIR": clean_columns(pd.read_excel(metrics_path, sheet_name="TCIR and DART", skiprows=1)),
             "Lead_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs - Leadership")),
-            "GS_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs - GS and EHS"))
+            "GS_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs - GS and EHS")),
+            "HSEQ_Obs": clean_columns(pd.read_excel(audit_path, sheet_name="Safe Obs GS EHS"))
         }
     except Exception as e:
         st.error(f"Error loading files: {e}")
@@ -32,48 +33,74 @@ def load_all_data():
 
 data = load_all_data()
 
-if data is not None:
-    # --- GLOBAL DATA PROCESSING ---
-    df_raw = data["Incidents"].copy()
-    date_col = 'Date of Incident (UTC)'
-    df_raw['Date'] = pd.to_datetime(df_raw[date_col], errors='coerce')
+if data:
+    df = data["Incidents"]
+    # Reverting to original date parsing logic
+    df['Date'] = pd.to_datetime(df.iloc[:, 0], errors='coerce')
+    df = df.dropna(subset=['Date'])
     
-    # Filtered version for 2026 charts
-    df = df_raw[df_raw['Date'].dt.year == 2026].dropna(subset=['Date']).copy()
-    df['Week'] = df['Date'].dt.isocalendar().week
-
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
 
     with tabs[0]: 
-        st.subheader("2026 Incident Severity Tracking")
-        severity_mapping = {'Property Damage': 25, 'First Aid': 75, 'Other Recordable Case': 250, 'Days Away From Work': 350, 'Recordable - Fatality': 600}
-        df['Points'] = df['Injury Classification'].map(severity_mapping).fillna(0)
-        weekly_scores = df.groupby('Week')['Points'].sum().sort_index()
-        fig = go.Figure(go.Scatter(x=weekly_scores.index, y=weekly_scores.values, mode='lines+markers'))
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Incident Breakdown")
+        col1, col2 = st.columns(2)
+        type_counts = df.groupby('Type').size().reset_index(name='Count')
+        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f')
+        col1.plotly_chart(fig_type, use_container_width=True)
+        
+        dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', 
+                          title="Incidents by Department & Type", barmode='group', text_auto='.0f', height=600)
+        fig_dept.update_layout(xaxis={'categoryorder':'total descending'})
+        st.plotly_chart(fig_dept, use_container_width=True)
 
-    with tabs[3]:
-        st.subheader("Safe Observations")
+    with tabs[1]: 
+        st.subheader("Compliance & Reporting Trends")
+        col1, col2 = st.columns(2)
+        df_fsi = data["FSI"].dropna(subset=[data["FSI"].columns[4]])
+        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True)
+        fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target (100%)")
+        col1.plotly_chart(fig_fsi, use_container_width=True)
+        
+        df_capa = data["CAPAs"].dropna(subset=[data["CAPAs"].columns[4]])
+        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True)
+        fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target (80%)")
+        col2.plotly_chart(fig_capa, use_container_width=True)
+
+    with tabs[2]: 
+        st.subheader("Housekeeping Status by Department")
+        hk_data = df.groupby(['Department', 'Status']).size().reset_index(name='Count')
+        fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', title="Status Tracking", text_auto='.0f')
+        st.plotly_chart(fig_hk, use_container_width=True)
+
+    with tabs[3]: 
+        st.subheader("Safe Observations Tracking")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Leadership Obs", len(data["Lead_Obs"]))
+        c2.metric("GS Obs", len(data["GS_Obs"]))
         hseq_df = data["HSEQ_Obs"]
-        # Use simple column indexing or check for presence
-        st.metric("HSEQ Obs", len(hseq_df))
+        hseq_filtered = hseq_df[hseq_df['Auditor_Name'] != 'Maddi'] if 'Auditor_Name' in hseq_df.columns else hseq_df
+        c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_filtered))
 
     with tabs[4]: 
-        st.subheader("Risk Mitigation Progress (All Time)")
-        # Using df_raw which is guaranteed to be defined in this scope
-        total_risk = len(df_raw)
-        completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
-        in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
+        st.subheader("Risk Mitigation Progress (All Data)")
+        # Calculated from original df without 2026 filter
+        total_risk = len(df)
+        completed = len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])])
+        in_progress = len(df[df['Status'].isin(['In Draft', 'In Review'])])
         need_info = max(0, total_risk - (completed + in_progress))
         
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Risk (All)", total_risk)
-        c2.metric("Completed", completed)
-        c3.metric("In Progress", in_progress)
-        c4.metric("Need Info", need_info)
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total Risk", total_risk)
+        m2.metric("Completed", completed)
+        m3.metric("In Progress", in_progress)
+        m4.metric("Need More Info", need_info)
         
         st.divider()
-        st.write("### Edit Incident Status (All Data)")
-        st.data_editor(df_raw, column_config={
-            "Status": st.column_config.SelectboxColumn(options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'])
-        }, use_container_width=True)
+        st.data_editor(df, column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status", 
+                options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
+                required=True
+            )
+        }, hide_index=True, use_container_width=True)
