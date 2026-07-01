@@ -73,7 +73,7 @@ if data:
         c3.metric("HSEQ Obs", len(data["HSEQ_Obs"]))
 
     with tabs[4]: 
-        st.subheader("Risk Mitigation Progress (All Data)")
+        st.subheader("Risk Mitigation Progress")
         
         # Calculated from df_raw (All Time)
         total_risk = len(df_raw)
@@ -91,7 +91,7 @@ if data:
             """, unsafe_allow_html=True)
 
         m1, m2, m3, m4 = st.columns(4)
-        with m1: colored_metric("Total Risk (All)", total_risk, "blue")
+        with m1: colored_metric("Total Risk", total_risk, "blue")
         with m2: colored_metric("Completed", completed, "green")
         with m3: colored_metric("In Progress", in_progress, "orange") # Using orange for visibility as yellow can be hard to read
         with m4: colored_metric("Need More Info", need_info, "red")
