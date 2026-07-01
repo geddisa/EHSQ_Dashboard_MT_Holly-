@@ -9,12 +9,11 @@ st.title("EHSQ Performance Dashboard")
 
 @st.cache_data
 def load_all_data():
-    # Load your actual data files
-    incident_path = "IncidentReports_All_MTH_2026-06-25.xlsx - Sheet1.csv"
-    # Ensure other files (Metrics, Audit) are in the same directory
+    # Corrected: Using read_excel for your Excel file
+    incident_path = "IncidentReports_All_MTH_2026-06-25.xlsx"
     try:
         return {
-            "Incidents": pd.read_csv(incident_path),
+            "Incidents": pd.read_excel(incident_path, sheet_name="Sheet1"),
             "FSI": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="FSI Reports", skiprows=1),
             "CAPAs": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="CAPAs", skiprows=1),
             "Lead_Obs": pd.read_excel("Audit Schedule - Internal - LPA.xlsx", sheet_name="Safe Obs - Leadership"),
@@ -30,7 +29,7 @@ data = load_all_data()
 if data:
     # --- DATA PROCESSING ---
     df_raw = data["Incidents"].copy()
-    # Correct column name based on your file
+    # Corrected: Targeting the specific column name from your Excel file
     df_raw['Date'] = pd.to_datetime(df_raw['Date of Incident (UTC)'], errors='coerce')
     df_raw = df_raw.dropna(subset=['Date'])
     
@@ -69,7 +68,7 @@ if data:
 
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress (All Data)")
-        # Calculations use df_raw (All Time)
+        # Calculated from df_raw (All Time)
         total_risk = len(df_raw)
         completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
