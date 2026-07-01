@@ -2,18 +2,24 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Dashboard Setup
+# --- DASHBOARD SETUP & HEADER ALIGNMENT ---
 st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
 
 try:
-    col_logo, col_title = st.columns([1, 6])
+    # vertical_alignment="center" perfectly aligns the logo and title
+    col_logo, col_title = st.columns([1, 6], vertical_alignment="center")
+    
     with col_logo:
         st.image("Company_Logo.png", width=200)
+        
     with col_title:
-        st.title("EHSQ KPI Dashboard")
-except:
+        # Removes hidden top padding so text aligns with the image
+        st.markdown("<h1 style='margin-bottom: 0; padding-top: 0;'>EHSQ KPI Dashboard</h1>", unsafe_allow_html=True)
+except Exception as e:
     st.title("EHSQ KPI Dashboard")
 
+
+# --- DATA LOADING ---
 @st.cache_data
 def load_all_data():
     incident_path = "IncidentReports_All_MTH_2026-06-25.xlsx"
@@ -35,8 +41,9 @@ def load_all_data():
 
 data = load_all_data()
 
+# --- MAIN DASHBOARD LOGIC ---
 if data:
-    # --- DATA PROCESSING ---
+    # Data Processing
     df_raw = data["Incidents"].copy()
     df_raw['Date'] = pd.to_datetime(df_raw['Date of Incident (UTC)'], errors='coerce')
     df_raw = df_raw.dropna(subset=['Date'])
@@ -46,6 +53,7 @@ if data:
     # Tabs definition
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
 
+    # --- TAB 0: OVERVIEW ---
     with tabs[0]: 
         st.subheader("Incident Breakdown")
         col1, col2 = st.columns(2)
@@ -62,6 +70,7 @@ if data:
         
         st.divider()
         
+        # Severity Chart correctly nested inside Tab 0
         st.subheader("Incident Severity Analysis")
         df_severity = df_raw.copy()
         df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
@@ -89,6 +98,7 @@ if data:
         fig_severity = px.line(weekly_scores, x='Week', y='Points', title="Weekly Incident Severity Score", markers=True)
         st.plotly_chart(fig_severity, use_container_width=True)
 
+    # --- TAB 1: COMPLIANCE ---
     with tabs[1]: 
         st.subheader("Compliance & Reporting Trends")
         c1, c2 = st.columns(2)
@@ -103,38 +113,10 @@ if data:
         fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
         c2.plotly_chart(fig_capa, use_container_width=True)
 
+    # --- TAB 2: HOUSEKEEPING ---
     with tabs[2]: 
         st.subheader("Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
         fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', text='Count')
         fig_hk.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)
-        st.plotly_chart(fig_hk, use_container_width=True)
-
-    with tabs[3]: 
-        st.subheader("Safe Observations Tracking")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Leadership Obs", len(data["Lead_Obs"]))
-        c2.metric("GS Obs", len(data["GS_Obs"]))
-        c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
-        
-    with tabs[4]: 
-        st.subheader("Risk Mitigation Progress")
-        total_risk = len(df_raw)
-        completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
-        in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
-        need_info = max(0, total_risk - (completed + in_progress))
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Risk", total_risk)
-        m2.metric("Completed", completed)
-        m3.metric("In Progress", in_progress)
-        m4.metric("Need More Info", need_info)
-        
-        st.divider()
-        st.data_editor(df_raw, column_config={
-            "Status": st.column_config.SelectboxColumn(
-                "Status", 
-                options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
-                required=True
-            )
-        }, hide_index=True, use_container_width=True)
+        st.plotly_chart(fig_hk, use_container_width=True
