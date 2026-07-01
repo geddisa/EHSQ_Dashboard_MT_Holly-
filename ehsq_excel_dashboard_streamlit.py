@@ -168,10 +168,42 @@ with tabs[2]:
 
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
+    
+    # Metrics
     c1, c2, c3 = st.columns(3)
     c1.metric("Leadership Obs", len(data["Lead_Obs"]))
     c2.metric("GS Obs", len(data["GS_Obs"]))
     c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
+    
+    st.divider()
+    st.subheader("Observation Trends")
+    
+    # Prepare trend data
+    # We create a combined dataframe for plotting
+    def process_obs_data(df, name):
+        # Adjust 'Date' to the exact column name in your Excel files
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+        return df.groupby(df['Date'].dt.to_period('W')).size().reset_index(name='Count').assign(Category=name)
+
+    # Combine data - Make sure 'Date' matches your column headers
+    trend_lead = process_obs_data(data["Lead_Obs"].copy(), "Leadership")
+    trend_gs = process_obs_data(data["GS_Obs"].copy(), "GS")
+    trend_hseq = process_obs_data(data["HSEQ_Obs"].copy(), "HSEQ")
+    
+    all_trends = pd.concat([trend_lead, trend_gs, trend_hseq])
+    all_trends['Date'] = all_trends['Date'].dt.to_timestamp()
+
+    # Create Trend Chart
+    fig_trends = px.line(
+        all_trends, 
+        x='Date', 
+        y='Count', 
+        color='Category', 
+        title="Weekly Safe Observation Trends",
+        markers=True
+    )
+    fig_trends.update_layout(xaxis_title="Date", yaxis_title="Number of Observations")
+    st.plotly_chart(fig_trends, use_container_width=True)
         
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
