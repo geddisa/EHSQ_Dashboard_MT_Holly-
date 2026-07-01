@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+# Dashboard Setup
 st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
@@ -17,7 +18,6 @@ def load_all_data():
         return df
 
     try:
-        # Load sheets. If your Excel file has a title row, add skiprows=1 here.
         return {
             "Incidents": clean_columns(pd.read_excel(incident_path, sheet_name="Sheet1")),
             "FSI": clean_columns(pd.read_excel(metrics_path, sheet_name="FSI Reports", skiprows=1)),
@@ -34,26 +34,20 @@ def load_all_data():
 data = load_all_data()
 
 if data:
-    df = data["Incidents"]
+    # --- Data Preparation ---
+    df_raw = data["Incidents"].copy()
+    date_col = 'Date of Incident (UTC)'
+    df_raw['Date'] = pd.to_datetime(df_raw[date_col], errors='coerce')
     
-    # --- FIX: USE THE EXACT DATE COLUMN NAME ---
-    # Based on your script, it is 'Date of Incident (UTC)'
-    # If this fails, check your columns list by uncommenting the line below:
-    # st.write(df.columns.tolist())
-    
-    date_col = 'Date of Incident (UTC)' 
-    df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
-    
-    # We only drop rows that are strictly NaT, but keep rows with valid data
-    df = df.dropna(subset=['Date'])
+    # Filter for 2026 and handle missing dates
+    df = df_raw[df_raw['Date'].dt.year == 2026].dropna(subset=['Date'])
     df['Week'] = df['Date'].dt.isocalendar().week
 
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
 
+    # --- Tab 0: Overview ---
     with tabs[0]: 
-        st.subheader("Incident Severity Tracking")
-        
-        # Severity Calculation
+        st.subheader("Incident Severity Tracking (2026)")
         severity_mapping = {
             'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
             'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
@@ -67,28 +61,24 @@ if data:
         fig.add_hrect(y0=0, y1=400, fillcolor="lightgreen", opacity=0.3, line_width=0, annotation_text="Low Risk")
         fig.add_hrect(y0=400, y1=800, fillcolor="khaki", opacity=0.3, line_width=0, annotation_text="Medium Risk")
         fig.add_hrect(y0=800, y1=1250, fillcolor="lightcoral", opacity=0.3, line_width=0, annotation_text="High Risk")
-        fig.add_trace(go.Scatter(x=weekly_scores.index, y=weekly_scores.values, mode='lines+markers', name='Severity Total', line=dict(color='black', width=3)))
+        fig.add_trace(go.Scatter(x=weekly_scores.index, y=weekly_scores.values, mode='lines+markers', name='2026 Severity', line=dict(color='black', width=3)))
         fig.update_layout(title="Incident Severity Graph", template="plotly_white", height=400)
         st.plotly_chart(fig, use_container_width=True)
 
-        col1, col2 = st.columns(2)
-        type_counts = df.groupby('Type').size().reset_index(name='Count')
-        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f'), use_container_width=True)
-        
-        dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
-        st.plotly_chart(px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department & Type", barmode='group', text_auto='.0f'), use_container_width=True)
-
-    with tabs[1]: 
+    # --- Tab 1: Compliance ---
+    with tabs[1]:
         st.subheader("Compliance & Reporting Trends")
         c1, c2 = st.columns(2)
         c1.plotly_chart(px.line(data["FSI"].dropna(subset=[data["FSI"].columns[4]]), x=data["FSI"].columns[0], y=data["FSI"].columns[4], title="FSI % On Time").add_hline(y=1.0, line_dash="dash", line_color="red"), use_container_width=True)
         c2.plotly_chart(px.line(data["CAPAs"].dropna(subset=[data["CAPAs"].columns[4]]), x=data["CAPAs"].columns[0], y=data["CAPAs"].columns[4], title="CAPA % On Time").add_hline(y=0.8, line_dash="dash", line_color="red"), use_container_width=True)
 
-    with tabs[2]: 
+    # --- Tab 2: Housekeeping ---
+    with tabs[2]:
         st.subheader("Housekeeping Status by Department")
         st.plotly_chart(px.bar(df.groupby(['Department', 'Status']).size().reset_index(name='Count'), x='Department', y='Count', color='Status', barmode='group', title="Status Tracking", text_auto='.0f'), use_container_width=True)
 
-    with tabs[3]: 
+    # --- Tab 3: Safe Observations ---
+    with tabs[3]:
         st.subheader("Safe Observations Tracking")
         c1, c2, c3 = st.columns(3)
         c1.metric("Leadership Obs", len(data["Lead_Obs"]))
@@ -96,10 +86,22 @@ if data:
         hseq_df = data["HSEQ_Obs"]
         c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_df[hseq_df['Auditor_Name'] != 'Maddi']))
 
-    with tabs[4]: 
+    # --- Tab 4: Risk Mitigation ---
+    with tabs[4]:
         st.subheader("Risk Mitigation Progress")
         total_risk = len(df)
         completed = len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df[df['Status'].isin(['In Draft', 'In Review'])])
-        st.write("### Edit Incident Status")
-        df_edit = st.data_editor(df, column_config={"Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True)}, hide_index=True, use_container_width=True)
+        need_info = max(0, total_risk - (completed + in_progress))
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total Risk", total_risk)
+        m2.metric("Completed", completed)
+        m3.metric("In Progress", in_progress)
+        m4.metric("Need More Info", need_info)
+        
+        st.divider()
+        st.write("### All Incidents")
+        st.data_editor(df, column_config={
+            "Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True)
+        }, hide_index=True, use_container_width=True)
