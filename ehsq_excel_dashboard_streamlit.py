@@ -13,7 +13,7 @@ with col_logo:
     except:
         st.write("Logo missing")
 with col_title:
-    st.markdown("<h1 style='margin-bottom: 0; padding-top: 0;'>EHSQ KPI Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin-bottom: 0; padding-top: 0;'>EHSQ Dashboard</h1>", unsafe_allow_html=True)
 
 # --- NO-CACHE DATA LOADING ---
 def load_all_data():
