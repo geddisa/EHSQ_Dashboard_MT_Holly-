@@ -62,50 +62,9 @@ if data:
         dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count')
         fig_dept.update_traces(textangle=0, textposition='outside')
-        st.plotly_chart(fig_dept, width='stretch')
-
-    with tabs[1]: 
-        st.subheader("Compliance & Reporting Trends")
-        c1, c2 = st.columns(2)
+        st.plotly_chart(fig_dept, width='stretch') 
+          st.divider()
         
-        fsi_df = data["FSI"]
-        fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True)
-        fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
-        c1.plotly_chart(fig_fsi, width='stretch')
-        
-        capa_df = data["CAPAs"]
-        fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
-        fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
-        c2.plotly_chart(fig_capa, width='stretch')
-        
-
-    with tabs[2]: 
-        st.subheader("Housekeeping Status")
-        hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        
-        # Create the figure
-        fig = px.bar(
-            hk_data, 
-            x='Department', 
-            y='Count', 
-            color='Status', 
-            barmode='group', 
-            text='Count' # Set the text explicitly to 'Count'
-        )
-        
-        # textangle=0 forces the labels to stand horizontally
-# Change this in your Housekeeping tab code
-fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)        
-        st.plotly_chart(fig, width='stretch')
-
-    with tabs[3]: 
-        st.subheader("Safe Observations Tracking")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Leadership Obs", len(data["Lead_Obs"]))
-        c2.metric("GS Obs", len(data["GS_Obs"]))
-        c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
-        
-        st.divider()
         st.subheader("Incident Severity Analysis")
         
         # Pulling directly from df_raw (which is loaded from IncidentReports_All_MTH_2026-06-25.xlsx)
@@ -156,6 +115,49 @@ fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)
         ax.legend(loc='upper left', frameon=True)
         
         st.pyplot(fig)
+
+    with tabs[1]: 
+        st.subheader("Compliance & Reporting Trends")
+        c1, c2 = st.columns(2)
+        
+        fsi_df = data["FSI"]
+        fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True)
+        fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
+        c1.plotly_chart(fig_fsi, width='stretch')
+        
+        capa_df = data["CAPAs"]
+        fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
+        fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
+        c2.plotly_chart(fig_capa, width='stretch')
+        
+
+    with tabs[2]: 
+        st.subheader("Housekeeping Status")
+        hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
+        
+        # Create the figure
+        fig = px.bar(
+            hk_data, 
+            x='Department', 
+            y='Count', 
+            color='Status', 
+            barmode='group', 
+            text='Count' # Set the text explicitly to 'Count'
+        )
+        
+        # textangle=0 forces the labels to stand horizontally
+# Change this in your Housekeeping tab code
+fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)        
+        st.plotly_chart(fig, width='stretch')
+
+    with tabs[3]: 
+        st.subheader("Safe Observations Tracking")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Leadership Obs", len(data["Lead_Obs"]))
+        c2.metric("GS Obs", len(data["GS_Obs"]))
+        c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
+        
+      
         
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
