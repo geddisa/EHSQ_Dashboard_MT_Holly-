@@ -71,7 +71,18 @@ if data:
     with tabs[2]: 
         st.subheader("2026 Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        st.plotly_chart(px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group'), width='stretch')
+        # Added text_auto='.0f' to show the count on each bar segment
+        st.plotly_chart(
+            px.bar(
+                hk_data, 
+                x='Department', 
+                y='Count', 
+                color='Status', 
+                barmode='group', 
+                text_auto='.0f'
+            ), 
+            width='stretch'
+        )
 
     with tabs[3]: 
         st.subheader("Safe Observations Tracking")
