@@ -44,21 +44,29 @@ if data:
         st.subheader("Incident Breakdown")
         col1, col2 = st.columns(2)
         type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
-        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type"), width='stretch')
+        # Added text_auto='.0f' for data labels
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type", text_auto='.0f'), width='stretch')
         
         dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
-        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department")
+        # Added text_auto='.0f' for data labels
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="2026 Incidents by Department", text_auto='.0f')
         st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[1]: 
         st.subheader("Compliance & Reporting Trends")
         c1, c2 = st.columns(2)
-        # Fix: Explicitly select X and Y columns to avoid "wide-form" data errors
+        
         fsi_df = data["FSI"]
-        c1.plotly_chart(px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time"), width='stretch')
+        # Added .add_hline for target line (1.0 = 100%)
+        fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True)
+        fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
+        c1.plotly_chart(fig_fsi, width='stretch')
         
         capa_df = data["CAPAs"]
-        c2.plotly_chart(px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time"), width='stretch')
+        # Added .add_hline for target line (0.8 = 80%)
+        fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
+        fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
+        c2.plotly_chart(fig_capa, width='stretch')
 
     with tabs[2]: 
         st.subheader("2026 Housekeeping Status")
