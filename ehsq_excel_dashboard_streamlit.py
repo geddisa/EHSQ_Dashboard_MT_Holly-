@@ -50,12 +50,13 @@ with tabs[0]:
     st.subheader("Incident Breakdown")
     col1, col2 = st.columns(2)
     
-    # Existing Breakdown Charts
+    # 1. Incident Type Chart
     type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
     fig = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text='Count')
     fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0) 
     col1.plotly_chart(fig, use_container_width=True)
     
+    # 2. Incident Department Chart
     dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
     fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count')
     fig_dept.update_traces(textangle=0, textposition='outside')
@@ -64,7 +65,7 @@ with tabs[0]:
     st.divider()
     st.subheader("Incident Severity Analysis")
     
-    # 1. Prepare Data
+    # 3. Severity Analysis Logic (2026 Only)
     df_severity = df_2026.copy()
     df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
     severity_mapping = {
@@ -80,10 +81,10 @@ with tabs[0]:
     all_weeks = pd.DataFrame({'Week': range(1, current_week + 1)})
     weekly_scores = pd.merge(all_weeks, weekly_scores, on='Week', how='left').fillna(0)
     
-    # 2. Create the Figure
+    # 4. Severity Chart Construction
     fig = go.Figure()
     
-    # Add Background Zones
+    # Add Background Zones (Low, Medium, High Risk)
     fig.add_shape(type="rect", x0=0.5, y0=0, x1=current_week + 0.5, y1=400, fillcolor="lightgreen", opacity=0.4, layer="below", line_width=0)
     fig.add_shape(type="rect", x0=0.5, y0=400, x1=current_week + 0.5, y1=800, fillcolor="khaki", opacity=0.4, layer="below", line_width=0)
     fig.add_shape(type="rect", x0=0.5, y0=800, x1=current_week + 0.5, y1=1200, fillcolor="lightcoral", opacity=0.4, layer="below", line_width=0)
@@ -93,10 +94,10 @@ with tabs[0]:
     fig.add_annotation(x=1, y=600, text="Medium Risk", showarrow=False, font=dict(color="goldenrod", size=14, weight="bold"))
     fig.add_annotation(x=1, y=1000, text="High Risk", showarrow=False, font=dict(color="red", size=14, weight="bold"))
     
-    # Add Line Trace
+    # Add Trend Line
     fig.add_trace(go.Scatter(x=weekly_scores['Week'], y=weekly_scores['Points'], mode='lines+markers', name='Weekly Severity Total', line=dict(color='black', width=3)))
     
-    # 3. Layout Formatting
+    # Final Formatting
     fig.update_layout(
         title="Incident Severity Graph",
         xaxis=dict(title="Calendar Week Number", tickmode='linear', dtick=1),
@@ -104,8 +105,24 @@ with tabs[0]:
         showlegend=True,
         plot_bgcolor='white'
     )
-    
     st.plotly_chart(fig, use_container_width=True)
+    
+    # 5. Severity Legend Box
+    st.markdown("""
+    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+        <p style="margin: 0; font-weight: bold;">Severity Point Mapping:</p>
+        <ul style="margin: 0; padding-left: 20px;">
+            <li><b>25 pt:</b> Property Damage</li>
+            <li><b>50 pt:</b> Record Only - No Treatment</li>
+            <li><b>75 pt:</b> First Aid</li>
+            <li><b>150 pt:</b> Molten Metal Spill > 25 lbs / Molten Metal Explosion (Force 2 or 3)</li>
+            <li><b>250 pt:</b> Other Recordable Case / Restricted or Transferred Work</li>
+            <li><b>350 pt:</b> Days Away From Work</li>
+            <li><b>600 pt:</b> Recordable - Fatality</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
 with tabs[1]: 
     st.subheader("Compliance & Reporting Trends")
     c1, c2 = st.columns(2)
