@@ -131,5 +131,24 @@ if data:
         m4.metric("Need More Info", need_info)
         
         st.divider()
-        st.data_editor(df_raw, column_config={
-            "Status":
+        
+        # Fixed st.data_editor block
+        st.data_editor(
+            df_raw, 
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status",
+                    help="Update the mitigation status",
+                    options=[
+                        "In Draft",
+                        "In Review",
+                        "Completed On Time",
+                        "Completed Late",
+                        "Need Info"
+                    ],
+                    required=True,
+                )
+            },
+            hide_index=True,
+            use_container_width=True
+        )
