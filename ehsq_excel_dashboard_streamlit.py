@@ -43,15 +43,13 @@ if data:
     with tabs[0]: 
         st.subheader("Incident Breakdown")
         col1, col2 = st.columns(2)
+        type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
+        # Added text_auto='.0f' for data labels
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type", text_auto='.0f'), width='stretch')
         
-        # Incident Type Bar Chart
-        fig_type = px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type", text_auto='.0f')
-        fig_type.update_traces(textangle=-90, textposition="outside")
-        col1.plotly_chart(fig_type, width='stretch')
-        
-        # Department/Type Bar Chart
+        dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
+        # Added text_auto='.0f' for data labels
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="2026 Incidents by Department", text_auto='.0f')
-        fig_dept.update_traces(textangle=-90, textposition="outside")
         st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[1]: 
@@ -73,11 +71,18 @@ if data:
     with tabs[2]: 
         st.subheader("2026 Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        
-        # Housekeeping Status Bar Chart
-        fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', text_auto='.0f')
-        fig_hk.update_traces(textangle=-90, textposition="outside")
-        st.plotly_chart(fig_hk, width='stretch')
+        # Added text_auto='.0f' to show the count on each bar segment
+        st.plotly_chart(
+            px.bar(
+                hk_data, 
+                x='Department', 
+                y='Count', 
+                color='Status', 
+                barmode='group', 
+                text_auto='.0f'
+            ), 
+            width='stretch'
+        )
     with tabs[3]: 
         st.subheader("Safe Observations Tracking")
         c1, c2, c3 = st.columns(3)
