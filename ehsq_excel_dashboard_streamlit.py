@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 # Dashboard Setup
 st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
-st.title("EHSQ KPI Dashboard")
+st.title("Century Aluminum | Mt. Holly | EHSQ KPI Dashboard")
 
 @st.cache_data
 def load_all_data():
