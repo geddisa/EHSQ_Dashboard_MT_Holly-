@@ -69,7 +69,7 @@ if data:
         c2.plotly_chart(fig_capa, width='stretch')
 
     with tabs[2]: 
-        st.subheader("2026 Housekeeping Status")
+        st.subheader("Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
         # Added text_auto='.0f' to show the count on each bar segment
         st.plotly_chart(
