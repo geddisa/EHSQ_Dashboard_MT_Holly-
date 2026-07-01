@@ -169,7 +169,7 @@ with tabs[2]:
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
     
-    # Metrics
+    # 1. Metrics (Assuming these are still valid based on your original logic)
     c1, c2, c3 = st.columns(3)
     c1.metric("Leadership Obs", len(data["Lead_Obs"]))
     c2.metric("GS Obs", len(data["GS_Obs"]))
@@ -178,22 +178,29 @@ with tabs[3]:
     st.divider()
     st.subheader("Observation Trends")
     
-    # Prepare trend data
-    # We create a combined dataframe for plotting
-    def process_obs_data(df, name):
-        # Adjust 'Date' to the exact column name in your Excel files
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        return df.groupby(df['Date'].dt.to_period('W')).size().reset_index(name='Count').assign(Category=name)
+    # 2. Helper to extract data from the wide-format CSVs
+    def extract_trend_data(df, category_name):
+        # Transpose to turn columns into rows
+        # We assume the dates are in a specific row. 
+        # Based on your files, the date ranges are often in row indices 5-6.
+        # You may need to adjust 'iloc[5]' if the row index differs.
+        dates = df.iloc[5, 4:].values # Adjust index 5 based on your actual file
+        counts = df.iloc[6:, 4:].count(axis=1).values # Counts non-empty cells
+        
+        trend_df = pd.DataFrame({'Date': dates, 'Count': counts})
+        trend_df['Category'] = category_name
+        trend_df['Date'] = pd.to_datetime(trend_df['Date'].str.split(' - ').str[0], errors='coerce')
+        return trend_df.dropna()
 
-    # Combine data - Make sure 'Date' matches your column headers
-    trend_lead = process_obs_data(data["Lead_Obs"].copy(), "Leadership")
-    trend_gs = process_obs_data(data["GS_Obs"].copy(), "GS")
-    trend_hseq = process_obs_data(data["HSEQ_Obs"].copy(), "HSEQ")
+    # 3. Process each category
+    # Ensure these point to the correct files in your 'data' dict
+    trend_lead = extract_trend_data(data["Lead_Obs"], "Leadership")
+    trend_gs = extract_trend_data(data["GS_Obs"], "GS")
+    trend_hseq = extract_trend_data(data["HSEQ_Obs"], "HSEQ")
     
     all_trends = pd.concat([trend_lead, trend_gs, trend_hseq])
-    all_trends['Date'] = all_trends['Date'].dt.to_timestamp()
 
-    # Create Trend Chart
+    # 4. Create Trend Chart
     fig_trends = px.line(
         all_trends, 
         x='Date', 
@@ -202,9 +209,7 @@ with tabs[3]:
         title="Weekly Safe Observation Trends",
         markers=True
     )
-    fig_trends.update_layout(xaxis_title="Date", yaxis_title="Number of Observations")
     st.plotly_chart(fig_trends, use_container_width=True)
-        
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
     
