@@ -18,7 +18,7 @@ with col_title:
 def load_all_data():
     files = {
         # Updated to only include your current incident file
-        "Incidents": ("IncidentReports_All_MTH_2026-07-1.xlsx", "Sheet1", 0),
+        "Incidents": ("IncidentReports_All_MTH_2026-07-01.xlsx", "Sheet1", 0),
         "FSI": ("EHSQ Metrics.xlsx", "FSI Reports", 1),
         "CAPAs": ("EHSQ Metrics.xlsx", "CAPAs", 1),
         "Lead_Obs": ("Audit Schedule - Internal - LPA.xlsx", "Safe Obs - Leadership", 0),
