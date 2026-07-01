@@ -53,6 +53,10 @@ if data:
         fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0) 
         
         col1.plotly_chart(fig, width='stretch')
+        dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count')
+        fig_dept.update_traces(textangle=0, textposition='outside')
+        st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[1]: 
         st.subheader("Compliance & Reporting Trends")
@@ -68,10 +72,6 @@ if data:
         fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
         c2.plotly_chart(fig_capa, width='stretch')
         
-        dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
-        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count')
-        fig_dept.update_traces(textangle=0, textposition='outside')
-        st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[2]: 
         st.subheader("Housekeeping Status")
