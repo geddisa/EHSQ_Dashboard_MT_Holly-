@@ -74,36 +74,48 @@ if data:
         c1, c2, c3 = st.columns(3)
         c1.metric("Leadership Obs", len(data["Lead_Obs"]))
         c2.metric("GS Obs", len(data["GS_Obs"]))
-        c3.metric("HSEQ Obs", len(data["HSEQ_Obs"]))
+        c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
         
         st.divider()
         st.subheader("Incident Severity Analysis")
         
-        # ... (Data processing logic remains the same) ...
+        # Pulling directly from df_raw (which is loaded from IncidentReports_All_MTH_2026-06-25.xlsx)
         df_severity = df_raw.copy()
+        
+        # Ensure we are working with the Date column correctly
         df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
         
         severity_mapping = {
-            'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
-            'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
-            'Other Recordable Case': 250, 'Restricted or Transferred Work': 250,
-            'Days Away From Work': 350, 'Recordable - Fatality': 600 
+            'Property Damage': 25, 
+            'Record Only - No Treatment': 50, 
+            'First Aid': 75,
+            'Molten Metal Spill > 25 lbs': 150, 
+            'Molten Metal Explosion (Force 2 or 3)': 150,
+            'Other Recordable Case': 250, 
+            'Restricted or Transferred Work': 250,
+            'Days Away From Work': 350, 
+            'Recordable - Fatality': 600 
         }
 
+        # Mapping classification to points
         df_severity['Points'] = df_severity['Injury Classification'].map(severity_mapping).fillna(
             df_severity['Type'].map(severity_mapping)).fillna(0)
 
+        # Grouping by Week
         weekly_scores = df_severity.groupby('Week')['Points'].sum()
+        
+        # Dynamic week calculation based on the current date
         current_week = pd.to_datetime('2026-06-09').isocalendar().week
         weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
 
         fig, ax = plt.subplots(figsize=(14, 6))
         
-        # Risk Zones with clear labels
+        # Define Zones
         ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (Green: 0-400)')
         ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (Yellow: 401-800)')
         ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (Red: 800+)')
         
+        # Plot data
         ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Weekly Total')
         
         ax.set_title('Incident Severity Graph')
@@ -111,10 +123,11 @@ if data:
         ax.set_ylabel('Points')
         ax.set_xticks(range(1, current_week + 1))
         
-        # Adds the legend to the plot so users see the color/risk mapping
+        # Add Legend to confirm color meanings
         ax.legend(loc='upper left', frameon=True)
         
         st.pyplot(fig)
+        
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
         total_risk = len(df_raw)
