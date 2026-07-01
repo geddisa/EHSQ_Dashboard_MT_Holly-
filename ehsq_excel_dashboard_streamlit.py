@@ -167,43 +167,13 @@ with tabs[2]:
     st.plotly_chart(fig_hk, use_container_width=True)
 
 with tabs[3]: 
-    st.subheader("Observation Trends")
-
-    def get_trend_data(df, category_name):
-        # 1. Locate the row with the date ranges (e.g., '2/2/26 - 2/6/26')
-        # In your files, these dates appear to start around row 14-16
-        # We look for the first row containing '-' which indicates a date range
-        date_row_idx = df.apply(lambda row: row.astype(str).str.contains('-').any(), axis=1).idxmax()
-        date_row = df.iloc[date_row_idx]
-        
-        # 2. Extract only the start date from the range string
-        dates = pd.to_datetime(date_row.astype(str).str.split(' - ').str[0], errors='coerce')
-        
-        # 3. Sum the observations (numeric entries) per date column
-        # We look at rows following the date row and count numbers
-        data_rows = df.iloc[date_row_idx + 1:]
-        counts = data_rows.apply(pd.to_numeric, errors='coerce').notna().sum()
-        
-        # 4. Create cleaned dataframe
-        trend_df = pd.DataFrame({'Date': dates, 'Count': counts})
-        trend_df = trend_df[trend_df['Date'].notna()]
-        trend_df['Category'] = category_name
-        return trend_df
-
-    # Process your 3 files
-    # Make sure 'data' contains the loaded CSVs
-    trend_lead = get_trend_data(data["Lead_Obs"], "Leadership")
-    trend_gs = get_trend_data(data["GS_Obs"], "GS")
-    trend_hseq = get_trend_data(data["HSEQ_Obs"], "HSEQ")
+    st.subheader("Safe Observations Tracking")
     
-    # Combine and Plot
-    all_trends = pd.concat([trend_lead, trend_gs, trend_hseq])
-    
-    fig_trends = px.line(
-        all_trends, x='Date', y='Count', color='Category', 
-        title="Weekly Safe Observation Trends", markers=True
-    )
-    st.plotly_chart(fig_trends, use_container_width=True)
+    # Metrics
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Leadership Obs", len(data["Lead_Obs"]))
+    c2.metric("GS Obs", len(data["GS_Obs"]))
+    c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
     
