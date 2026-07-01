@@ -4,8 +4,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # Dashboard Setup
-st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
-st.title("EHSQ Performance Dashboard")
+st.set_page_config(layout="wide", page_title="EHSQ KPI Dashboard")
+st.title("EHSQ KPI Dashboard")
 
 @st.cache_data
 def load_all_data():
