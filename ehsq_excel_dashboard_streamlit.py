@@ -102,10 +102,38 @@ if data:
             st.warning(f"Could not find auditor column. Available columns: {list(hseq_df.columns)}")
 
     with tabs[4]: 
-        st.subheader("Risk Mitigation")
+        st.subheader("Risk Mitigation Progress (All Time)")
+        
+        # Use df_raw (Full Data) for these metrics
+        total_risk = len(df_raw)
+        completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
+        in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
+        need_info = max(0, total_risk - (completed + in_progress))
+
+        def display_custom_metric(label, value, color):
+            st.markdown(f"""<div style="border: 1px solid #e6e6e6; padding: 10px; border-radius: 5px; text-align: center;">
+                <div style="font-size: 0.9rem; color: #808495;">{label}</div>
+                <div style="font-size: 2rem; font-weight: 600; color: {color};">{value}</div></div>""", unsafe_allow_html=True)
+
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Risk", len(df))
-        m2.metric("Completed", len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])]))
-        m3.metric("In Progress", len(df[df['Status'].isin(['In Draft', 'In Review'])]))
-        m4.metric("Need Info", max(0, len(df) - len(df[df['Status'].isin(['Completed On Time', 'Completed Late', 'In Draft', 'In Review'])])))
-        st.data_editor(df, column_config={"Status": st.column_config.SelectboxColumn(options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'])}, use_container_width=True)
+        with m1: display_custom_metric("Total Risk (All)", total_risk, "#0000FF")
+        with m2: display_custom_metric("Completed", completed, "#008000")
+        with m3: display_custom_metric("In Progress", in_progress, "#FFD700")
+        with m4: display_custom_metric("Need More Info", need_info, "#FF0000")
+        
+        st.divider()
+        st.write("### Edit Incident Status (All Data)")
+        
+        # Use df_raw here so every incident appears in the editor
+        st.data_editor(
+            df_raw, 
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status", 
+                    options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
+                    required=True
+                )
+            }, 
+            hide_index=True, 
+            use_container_width=True
+        )
