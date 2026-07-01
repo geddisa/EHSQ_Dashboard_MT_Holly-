@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 # Dashboard Setup
 st.set_page_config(layout="wide", page_title="EHSQ KPI Dashboard")
@@ -31,24 +32,21 @@ data = load_all_data()
 if data:
     # --- DATA PROCESSING ---
     df_raw = data["Incidents"].copy()
-    # Corrected: Targeting the specific column name from your Excel file
     df_raw['Date'] = pd.to_datetime(df_raw['Date of Incident (UTC)'], errors='coerce')
     df_raw = df_raw.dropna(subset=['Date'])
     
-    # Filter for 2026 for charts
     df_2026 = df_raw[df_raw['Date'].dt.year == 2026].copy()
 
+    # Tabs definition
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
 
     with tabs[0]: 
         st.subheader("Incident Breakdown")
         col1, col2 = st.columns(2)
         type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
-        # Added text_auto='.0f' for data labels
         col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f'), width='stretch')
         
         dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
-        # Added text_auto='.0f' for data labels
         fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text_auto='.0f')
         st.plotly_chart(fig_dept, width='stretch')
 
@@ -57,13 +55,11 @@ if data:
         c1, c2 = st.columns(2)
         
         fsi_df = data["FSI"]
-        # Added .add_hline for target line (1.0 = 100%)
         fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True)
         fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
         c1.plotly_chart(fig_fsi, width='stretch')
         
         capa_df = data["CAPAs"]
-        # Added .add_hline for target line (0.8 = 80%)
         fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
         fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
         c2.plotly_chart(fig_capa, width='stretch')
@@ -71,35 +67,53 @@ if data:
     with tabs[2]: 
         st.subheader("Housekeeping Status")
         hk_data = df_2026.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        # Added text_auto='.0f' to show the count on each bar segment
-        st.plotly_chart(
-            px.bar(
-                hk_data, 
-                x='Department', 
-                y='Count', 
-                color='Status', 
-                barmode='group', 
-                text_auto='.0f'
-            ), 
-            width='stretch'
-        )
+        st.plotly_chart(px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', text_auto='.0f'), width='stretch')
+
     with tabs[3]: 
         st.subheader("Safe Observations Tracking")
         c1, c2, c3 = st.columns(3)
         c1.metric("Leadership Obs", len(data["Lead_Obs"]))
         c2.metric("GS Obs", len(data["GS_Obs"]))
         c3.metric("HSEQ Obs", len(data["HSEQ_Obs"]))
+        
+        st.divider()
+        st.subheader("Incident Severity Analysis")
+        df_severity = df_raw.copy()
+        df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
+        
+        severity_mapping = {
+            'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
+            'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
+            'Other Recordable Case': 250, 'Restricted or Transferred Work': 250,
+            'Days Away From Work': 350, 'Recordable - Fatality': 600 
+        }
+
+        df_severity['Points'] = df_severity['Injury Classification'].map(severity_mapping).fillna(
+            df_severity['Type'].map(severity_mapping)).fillna(0)
+
+        weekly_scores = df_severity.groupby('Week')['Points'].sum()
+        current_week = pd.to_datetime('2026-06-09').isocalendar().week
+        weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
+
+        fig, ax = plt.subplots(figsize=(14, 6))
+        ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (0-400)')
+        ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (401-800)')
+        ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (800+)')
+        
+        ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Severity Total')
+        ax.set_title('Incident Severity Graph')
+        ax.set_xlabel('Calendar Week Number')
+        ax.set_ylabel('Points')
+        ax.set_xticks(range(1, current_week + 1))
+        st.pyplot(fig)
 
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
-        
-        # Calculated from df_raw (All Time)
         total_risk = len(df_raw)
         completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
         need_info = max(0, total_risk - (completed + in_progress))
         
-        # Custom function to apply colors
         def colored_metric(label, value, color):
             st.markdown(f"""
                 <div style="background-color: #f8f9fa; padding: 10px; border-radius: 10px; border-left: 5px solid {color}; text-align: center;">
@@ -111,19 +125,12 @@ if data:
         m1, m2, m3, m4 = st.columns(4)
         with m1: colored_metric("Total Risk", total_risk, "blue")
         with m2: colored_metric("Completed", completed, "green")
-        with m3: colored_metric("In Progress", in_progress, "orange") # Using orange for visibility as yellow can be hard to read
+        with m3: colored_metric("In Progress", in_progress, "orange")
         with m4: colored_metric("Need More Info", need_info, "red")
         
         st.divider()
-        st.data_editor(
-            df_raw, 
-            column_config={
-                "Status": st.column_config.SelectboxColumn(
-                    "Status", 
-                    options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
-                    required=True
-                )
-            }, 
-            hide_index=True, 
-            width='stretch'
-        )
+        st.data_editor(df_raw, column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True
+            )
+        }, hide_index=True, width='stretch')
