@@ -48,6 +48,8 @@ tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "
 with tabs[0]: 
     st.subheader("Incident Breakdown")
     col1, col2 = st.columns(2)
+    
+    # Existing Breakdown Charts
     type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
     fig = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text='Count')
     fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0) 
@@ -59,16 +61,44 @@ with tabs[0]:
     col2.plotly_chart(fig_dept, use_container_width=True)
     
     st.divider()
+    
+    # --- Severity Analysis (Aligned with Aliyah's Script) ---
     st.subheader("Incident Severity Analysis")
+    
+    # 1. Map Severity Points
+    severity_mapping = {
+        'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75, 
+        'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150, 
+        'Other Recordable Case': 250, 'Restricted or Transferred Work': 250, 
+        'Days Away From Work': 350, 'Recordable - Fatality': 600
+    }
+    
     df_severity = df_raw.copy()
     df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
-    severity_mapping = {'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75, 'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150, 'Other Recordable Case': 250, 'Restricted or Transferred Work': 250, 'Days Away From Work': 350, 'Recordable - Fatality': 600}
-    df_severity['Points'] = df_severity['Injury Classification'].map(severity_mapping).fillna(df_severity['Type'].map(severity_mapping)).fillna(0)
+    df_severity['Points'] = df_severity['Injury Classification'].map(severity_mapping).fillna(
+        df_severity['Type'].map(severity_mapping)
+    ).fillna(0)
+    
+    # 2. Group by Week
     weekly_scores = df_severity.groupby('Week')['Points'].sum().reset_index()
-    current_week = pd.to_datetime('2026-06-09').isocalendar().week
-    all_weeks = pd.DataFrame({'Week': range(1, current_week + 1)})
-    weekly_scores = pd.merge(all_weeks, weekly_scores, on='Week', how='left').fillna(0)
-    fig_severity = px.line(weekly_scores, x='Week', y='Points', title="Weekly Incident Severity Score", markers=True)
+    
+    # 3. Plotting
+    fig_severity = px.line(
+        weekly_scores, 
+        x='Week', 
+        y='Points', 
+        title="Weekly Incident Severity Score", 
+        markers=True
+    )
+    
+    # Styling to match the professional look
+    fig_severity.update_traces(line_color='#1f77b4', line_width=3)
+    fig_severity.update_layout(
+        xaxis=dict(title="Calendar Week Number", dtick=1),
+        yaxis=dict(title="Total Accumulated Severity Points"),
+        hovermode="x unified"
+    )
+    
     st.plotly_chart(fig_severity, use_container_width=True)
 
 with tabs[1]: 
