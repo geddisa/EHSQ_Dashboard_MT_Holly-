@@ -61,46 +61,54 @@ with tabs[0]:
     col2.plotly_chart(fig_dept, use_container_width=True)
     
     st.divider()
-    
-    # --- Severity Analysis (Aligned with Aliyah's Script) ---
     st.subheader("Incident Severity Analysis")
     
-    # 1. Map Severity Points
+    # 1. Prepare Data
+    df_severity = df_2026.copy()
+    df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
     severity_mapping = {
         'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75, 
         'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150, 
         'Other Recordable Case': 250, 'Restricted or Transferred Work': 250, 
         'Days Away From Work': 350, 'Recordable - Fatality': 600
     }
-    
-    df_severity = df_raw.copy()
-    df_severity['Week'] = df_severity['Date'].dt.isocalendar().week
-    df_severity['Points'] = df_severity['Injury Classification'].map(severity_mapping).fillna(
-        df_severity['Type'].map(severity_mapping)
-    ).fillna(0)
-    
-    # 2. Group by Week
+    df_severity['Points'] = df_severity['Injury Classification'].map(severity_mapping).fillna(df_severity['Type'].map(severity_mapping)).fillna(0)
     weekly_scores = df_severity.groupby('Week')['Points'].sum().reset_index()
     
-    # 3. Plotting
-    fig_severity = px.line(
-        weekly_scores, 
-        x='Week', 
-        y='Points', 
-        title="Weekly Incident Severity Score", 
-        markers=True
+    current_week = pd.Timestamp.now().isocalendar().week
+    all_weeks = pd.DataFrame({'Week': range(1, current_week + 1)})
+    weekly_scores = pd.merge(all_weeks, weekly_scores, on='Week', how='left').fillna(0)
+    
+    # 2. Create the Figure
+    fig = go.Figure()
+    
+    # Add Background Zones
+    fig.add_shape(type="rect", x0=0.5, y0=0, x1=current_week + 0.5, y1=400, fillcolor="lightgreen", opacity=0.4, layer="below", line_width=0)
+    fig.add_shape(type="rect", x0=0.5, y0=400, x1=current_week + 0.5, y1=800, fillcolor="khaki", opacity=0.4, layer="below", line_width=0)
+    fig.add_shape(type="rect", x0=0.5, y0=800, x1=current_week + 0.5, y1=1200, fillcolor="lightcoral", opacity=0.4, layer="below", line_width=0)
+    
+    # Add Line Trace
+    fig.add_trace(go.Scatter(x=weekly_scores['Week'], y=weekly_scores['Points'], mode='lines+markers', name='Weekly Severity Total', line=dict(color='black', width=3)))
+    
+    # 3. Layout Formatting
+    fig.update_layout(
+        title="Incident Severity Graph",
+        xaxis=dict(title="Calendar Week Number", tickmode='linear', dtick=1),
+        yaxis=dict(title="Total Accumulated Severity Points", range=[0, 1250]),
+        showlegend=True,
+        plot_bgcolor='white'
     )
     
-    # Styling to match the professional look
-    fig_severity.update_traces(line_color='#1f77b4', line_width=3)
-    fig_severity.update_layout(
-        xaxis=dict(title="Calendar Week Number", dtick=1),
-        yaxis=dict(title="Total Accumulated Severity Points"),
-        hovermode="x unified"
-    )
+    st.plotly_chart(fig, use_container_width=True)
     
-    st.plotly_chart(fig_severity, use_container_width=True)
-
+    # 4. Severity Legend (Displaying the mapping as requested)
+    st.markdown("""
+    **Severity Point Mapping:**
+    * **25 pt:** Property Damage | **50 pt:** Record Only - No Treatment | **75 pt:** First Aid
+    * **150 pt:** Molten Metal Spill > 25 lbs / Molten Metal Explosion (Force 2 or 3)
+    * **250 pt:** Other Recordable Case / Restricted or Transferred Work
+    * **350 pt:** Days Away From Work | **600 pt:** Recordable - Fatality
+    """)
 with tabs[1]: 
     st.subheader("Compliance & Reporting Trends")
     c1, c2 = st.columns(2)
