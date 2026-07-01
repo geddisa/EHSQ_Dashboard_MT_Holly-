@@ -167,47 +167,41 @@ with tabs[2]:
     st.plotly_chart(fig_hk, use_container_width=True)
 
 with tabs[3]: 
-    st.subheader("Safe Observations Tracking")
-    
-    # 1. Metrics (Assuming these are still valid based on your original logic)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Leadership Obs", len(data["Lead_Obs"]))
-    c2.metric("GS Obs", len(data["GS_Obs"]))
-    c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
-    
-    st.divider()
     st.subheader("Observation Trends")
-    
-    # 2. Helper to extract data from the wide-format CSVs
-    def extract_trend_data(df, category_name):
-        # Transpose to turn columns into rows
-        # We assume the dates are in a specific row. 
-        # Based on your files, the date ranges are often in row indices 5-6.
-        # You may need to adjust 'iloc[5]' if the row index differs.
-        dates = df.iloc[5, 4:].values # Adjust index 5 based on your actual file
-        counts = df.iloc[6:, 4:].count(axis=1).values # Counts non-empty cells
+
+    def get_trend_data(df, category_name):
+        # 1. Locate the row with the date ranges (e.g., '2/2/26 - 2/6/26')
+        # In your files, these dates appear to start around row 14-16
+        # We look for the first row containing '-' which indicates a date range
+        date_row_idx = df.apply(lambda row: row.astype(str).str.contains('-').any(), axis=1).idxmax()
+        date_row = df.iloc[date_row_idx]
         
+        # 2. Extract only the start date from the range string
+        dates = pd.to_datetime(date_row.astype(str).str.split(' - ').str[0], errors='coerce')
+        
+        # 3. Sum the observations (numeric entries) per date column
+        # We look at rows following the date row and count numbers
+        data_rows = df.iloc[date_row_idx + 1:]
+        counts = data_rows.apply(pd.to_numeric, errors='coerce').notna().sum()
+        
+        # 4. Create cleaned dataframe
         trend_df = pd.DataFrame({'Date': dates, 'Count': counts})
+        trend_df = trend_df[trend_df['Date'].notna()]
         trend_df['Category'] = category_name
-        trend_df['Date'] = pd.to_datetime(trend_df['Date'].str.split(' - ').str[0], errors='coerce')
-        return trend_df.dropna()
+        return trend_df
 
-    # 3. Process each category
-    # Ensure these point to the correct files in your 'data' dict
-    trend_lead = extract_trend_data(data["Lead_Obs"], "Leadership")
-    trend_gs = extract_trend_data(data["GS_Obs"], "GS")
-    trend_hseq = extract_trend_data(data["HSEQ_Obs"], "HSEQ")
+    # Process your 3 files
+    # Make sure 'data' contains the loaded CSVs
+    trend_lead = get_trend_data(data["Lead_Obs"], "Leadership")
+    trend_gs = get_trend_data(data["GS_Obs"], "GS")
+    trend_hseq = get_trend_data(data["HSEQ_Obs"], "HSEQ")
     
+    # Combine and Plot
     all_trends = pd.concat([trend_lead, trend_gs, trend_hseq])
-
-    # 4. Create Trend Chart
+    
     fig_trends = px.line(
-        all_trends, 
-        x='Date', 
-        y='Count', 
-        color='Category', 
-        title="Weekly Safe Observation Trends",
-        markers=True
+        all_trends, x='Date', y='Count', color='Category', 
+        title="Weekly Safe Observation Trends", markers=True
     )
     st.plotly_chart(fig_trends, use_container_width=True)
 with tabs[4]: 
