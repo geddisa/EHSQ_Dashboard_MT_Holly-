@@ -88,6 +88,11 @@ with tabs[0]:
     fig.add_shape(type="rect", x0=0.5, y0=400, x1=current_week + 0.5, y1=800, fillcolor="khaki", opacity=0.4, layer="below", line_width=0)
     fig.add_shape(type="rect", x0=0.5, y0=800, x1=current_week + 0.5, y1=1200, fillcolor="lightcoral", opacity=0.4, layer="below", line_width=0)
     
+    # Add Risk Zone Labels
+    fig.add_annotation(x=1, y=200, text="Low Risk", showarrow=False, font=dict(color="green", size=14, weight="bold"))
+    fig.add_annotation(x=1, y=600, text="Medium Risk", showarrow=False, font=dict(color="goldenrod", size=14, weight="bold"))
+    fig.add_annotation(x=1, y=1000, text="High Risk", showarrow=False, font=dict(color="red", size=14, weight="bold"))
+    
     # Add Line Trace
     fig.add_trace(go.Scatter(x=weekly_scores['Week'], y=weekly_scores['Points'], mode='lines+markers', name='Weekly Severity Total', line=dict(color='black', width=3)))
     
@@ -101,15 +106,6 @@ with tabs[0]:
     )
     
     st.plotly_chart(fig, use_container_width=True)
-    
-    # 4. Severity Legend (Displaying the mapping as requested)
-    st.markdown("""
-    **Severity Point Mapping:**
-    * **25 pt:** Property Damage | **50 pt:** Record Only - No Treatment | **75 pt:** First Aid
-    * **150 pt:** Molten Metal Spill > 25 lbs / Molten Metal Explosion (Force 2 or 3)
-    * **250 pt:** Other Recordable Case / Restricted or Transferred Work
-    * **350 pt:** Days Away From Work | **600 pt:** Recordable - Fatality
-    """)
 with tabs[1]: 
     st.subheader("Compliance & Reporting Trends")
     c1, c2 = st.columns(2)
