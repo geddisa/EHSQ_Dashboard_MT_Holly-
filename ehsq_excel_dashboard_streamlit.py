@@ -84,13 +84,14 @@ if data:
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
         
-        # Calculate values
+        # Calculate metric values
         total_risk = len(df)
+        # Assuming 'Status' column exists in your incident dataframe
         completed = len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df[df['Status'].isin(['In Draft', 'In Review'])])
         need_info = max(0, total_risk - (completed + in_progress))
 
-        # Helper to create custom metric-like display
+        # Re-using your custom metric display logic
         def display_custom_metric(label, value, color):
             st.markdown(
                 f"""
@@ -103,11 +104,33 @@ if data:
             )
 
         m1, m2, m3, m4 = st.columns(4)
-        
-        with m1: display_custom_metric("Total Risk Identified", total_risk, "#0000FF") # 256 Blue
-        with m2: display_custom_metric("Completed", completed, "#008000")             # 247 Green
-        with m3: display_custom_metric("In Progress", in_progress, "#FFD700")         # 5 Yellow
-        with m4: display_custom_metric("Need More Info", need_info, "#FF0000")        # 4 Red
+        with m1: display_custom_metric("Total Risk Identified", total_risk, "#0000FF")
+        with m2: display_custom_metric("Completed", completed, "#008000")
+        with m3: display_custom_metric("In Progress", in_progress, "#FFD700")
+        with m4: display_custom_metric("Need More Info", need_info, "#FF0000")
         
         st.divider()
-        st.dataframe(df, use_container_width=True)
+        st.write("### Edit Incident Status")
+        
+        # Define the dropdown options
+        status_options = ['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info']
+        
+        # Use st.data_editor to create the interactive table
+        # We define the column configuration to force the Status column to be a selectbox
+        updated_df = st.data_editor(
+            df,
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status",
+                    help="Update the status of the incident",
+                    width="medium",
+                    options=status_options,
+                    required=True,
+                )
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+        
+        # Note: 'updated_df' now contains the changes made in the UI. 
+        # You can add a button below to save these changes back to your source file if desired.
