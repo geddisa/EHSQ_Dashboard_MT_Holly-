@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- DASHBOARD SETUP & HEADER ALIGNMENT ---
+# --- DASHBOARD SETUP ---
 st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
 
 col_logo, col_title = st.columns([1, 6], vertical_alignment="center")
@@ -14,8 +14,7 @@ with col_logo:
 with col_title:
     st.markdown("<h1 style='margin-bottom: 0; padding-top: 0;'>EHSQ KPI Dashboard</h1>", unsafe_allow_html=True)
 
-# --- OPTIMIZED DATA LOADING ---
-@st.cache_data(ttl=600)
+# --- NO-CACHE DATA LOADING ---
 def load_all_data():
     files = {
         "Incidents": ("IncidentReports_All_MTH_2026-06-25.xlsx", "Sheet1", 0),
@@ -27,15 +26,16 @@ def load_all_data():
     }
     data = {}
     for key, (file, sheet, skip) in files.items():
+        # Loading directly from disk without caching
         data[key] = pd.read_excel(file, sheet_name=sheet, skiprows=skip)
     return data
 
-with st.spinner('Loading data...'):
-    try:
-        data = load_all_data()
-    except Exception as e:
-        st.error(f"Error loading files: {e}. Ensure Excel files are in the same directory.")
-        st.stop()
+# Load data without st.cache_data
+try:
+    data = load_all_data()
+except Exception as e:
+    st.error(f"Error loading files: {e}. Ensure the Excel files are in the same folder.")
+    st.stop()
 
 # --- MAIN DASHBOARD LOGIC ---
 df_raw = data["Incidents"].copy()
