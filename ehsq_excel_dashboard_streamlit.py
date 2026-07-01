@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
 # Dashboard Setup
-st.set_page_config(layout="wide", page_title="Century Aluminum | Mt. Holly| EHSQ KPI Dashboard")
+st.set_page_config(layout="wide", page_title="Century Aluminum | Mt. Holly | EHSQ KPI Dashboard")
 st.title("EHSQ KPI Dashboard")
 
 @st.cache_data
