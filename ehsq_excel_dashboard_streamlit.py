@@ -94,8 +94,8 @@ if data:
         )
         
         # textangle=0 forces the labels to stand horizontally
-        fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)
-        
+# Change this in your Housekeeping tab code
+fig.update_traces(texttemplate='%{text}', textposition='outside', textangle=0)        
         st.plotly_chart(fig, width='stretch')
 
     with tabs[3]: 
