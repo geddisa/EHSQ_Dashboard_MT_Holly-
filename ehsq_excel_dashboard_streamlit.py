@@ -86,8 +86,20 @@ if data:
         c1, c2, c3 = st.columns(3)
         c1.metric("Leadership", len(data["Lead_Obs"]))
         c2.metric("GS Obs", len(data["GS_Obs"]))
+        
         hseq_df = data["HSEQ_Obs"]
-        c3.metric("HSEQ (Excl. Maddi)", len(hseq_df[hseq_df['Auditor_Name'] != 'Maddi']))
+        
+        # --- ROBUST FIX FOR KEYERROR ---
+        # We look for a column that contains "Auditor" to avoid a crash
+        auditor_col = next((col for col in hseq_df.columns if 'auditor' in col.lower()), None)
+        
+        if auditor_col:
+            count = len(hseq_df[hseq_df[auditor_col].astype(str) != 'Maddi'])
+            c3.metric("HSEQ (Excl. Maddi)", count)
+        else:
+            # Fallback if no auditor column exists
+            c3.metric("HSEQ Obs", len(hseq_df))
+            st.warning(f"Could not find auditor column. Available columns: {list(hseq_df.columns)}")
 
     with tabs[4]: 
         st.subheader("Risk Mitigation")
