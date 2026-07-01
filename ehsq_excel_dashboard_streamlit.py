@@ -124,62 +124,33 @@ with tabs[3]:
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
     
-    # 1. Manually set values based on your requirements
-    total_risk = 259
-    completed = 251
-    in_progress = 3
-    need_info = 5
-    
-    # 2. Display Metric Columns with specific colors
-    # Note: Streamlit metrics don't have built-in background colors for the text, 
-    # but we can organize them clearly.
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total Risk", total_risk) # Blue theme (default)
-    m2.metric("Completed", completed, delta_color="normal") # Green logic
-    m3.metric("In Progress", in_progress) # Orange logic
-    m4.metric("Need More Info", need_info) # Red logic
+    # 1. Metric values
+    # Total: 259 (Blue), Completed: 251 (Green), In Progress: 3 (Orange), Need Info: 5 (Red)
+    st.markdown("""
+        <style>
+        .metric-box { padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; font-size: 1.2em; }
+        </style>
+        <div style="display: flex; justify-content: space-around;">
+            <div class="metric-box" style="color: #1f77b4;">Total Risk<br>259</div>
+            <div class="metric-box" style="color: #2ca02c;">Completed<br>251</div>
+            <div class="metric-box" style="color: #ff7f0e;">In Progress<br>3</div>
+            <div class="metric-box" style="color: #d62728;">Need More Info<br>5</div>
+        </div>
+    """, unsafe_allow_html=True)
     
     st.divider()
     
-    # 3. Donut Chart with your requested color mapping
-    c1, c2 = st.columns([1, 2])
-    
-    chart_data = pd.DataFrame({
-        'Category': ['Completed', 'In Progress', 'Need More Info'],
-        'Value': [completed, in_progress, need_info]
-    })
-    
-    # Mapping colors: Completed (Green), In Progress (Orange), Need More Info (Red)
-    color_map = {
-        'Completed': '#2ca02c',       # Green
-        'In Progress': '#ff7f0e',     # Orange
-        'Need More Info': '#d62728'   # Red
-    }
-    
-    fig_donut = px.pie(
-        chart_data, 
-        values='Value', 
-        names='Category', 
-        hole=0.6,
-        title="Risk Mitigation Distribution",
-        color='Category',
-        color_discrete_map=color_map
+    # 2. Interactive Editor
+    st.caption("Update Status Below:")
+    st.data_editor(
+        df_raw, 
+        column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status", 
+                options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
+                required=True
+            )
+        }, 
+        hide_index=True, 
+        use_container_width=True
     )
-    fig_donut.update_traces(textinfo='value')
-    c1.plotly_chart(fig_donut, use_container_width=True)
-    
-    # 4. Interactive Editor
-    with c2:
-        st.caption("Update Status Below:")
-        st.data_editor(
-            df_raw, 
-            column_config={
-                "Status": st.column_config.SelectboxColumn(
-                    "Status", 
-                    options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
-                    required=True
-                )
-            }, 
-            hide_index=True, 
-            use_container_width=True
-        )
