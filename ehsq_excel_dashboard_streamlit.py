@@ -17,7 +17,6 @@ with col_title:
 # --- NO-CACHE DATA LOADING ---
 def load_all_data():
     files = {
-        # Updated to only include your current incident file
         "Incidents": ("IncidentReports_All_MTH_2026-07-01.xlsx", "Sheet1", 0),
         "FSI": ("EHSQ Metrics.xlsx", "FSI Reports", 1),
         "CAPAs": ("EHSQ Metrics.xlsx", "CAPAs", 1),
@@ -124,14 +123,55 @@ with tabs[3]:
         
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
+    
+    # 1. Calculate Metrics
     total_risk = len(df_raw)
     completed = len(df_raw[df_raw['Status'].isin(['Completed On Time', 'Completed Late'])])
     in_progress = len(df_raw[df_raw['Status'].isin(['In Draft', 'In Review'])])
     need_info = max(0, total_risk - (completed + in_progress))
+    
+    # 2. Display Metric Columns
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Total Risk", total_risk)
     m2.metric("Completed", completed)
     m3.metric("In Progress", in_progress)
     m4.metric("Need More Info", need_info)
+    
     st.divider()
-    st.data_editor(df_raw, column_config={"Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True)}, hide_index=True, use_container_width=True)
+    
+    # 3. Donut Chart Visualization
+    c1, c2 = st.columns([1, 2])
+    
+    # Prepare data for the pie/donut chart
+    chart_data = pd.DataFrame({
+        'Category': ['Completed', 'In Progress', 'Need More Info'],
+        'Value': [completed, in_progress, need_info]
+    })
+    
+    fig_donut = px.pie(
+        chart_data, 
+        values='Value', 
+        names='Category', 
+        hole=0.5,
+        title="Risk Mitigation Distribution",
+        color='Category',
+        color_discrete_map={'Completed': '#2ca02c', 'In Progress': '#1f77b4', 'Need More Info': '#d62728'}
+    )
+    fig_donut.update_traces(textinfo='percent+value')
+    c1.plotly_chart(fig_donut, use_container_width=True)
+    
+    # 4. Interactive Editor
+    with c2:
+        st.caption("Update Status Below:")
+        st.data_editor(
+            df_raw, 
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status", 
+                    options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
+                    required=True
+                )
+            }, 
+            hide_index=True, 
+            use_container_width=True
+        )
