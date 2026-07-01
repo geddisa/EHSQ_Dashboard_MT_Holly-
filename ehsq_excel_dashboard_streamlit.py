@@ -45,11 +45,11 @@ if data:
         col1, col2 = st.columns(2)
         type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
         # Added text_auto='.0f' for data labels
-        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="2026 Incidents by Type", text_auto='.0f'), width='stretch')
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f'), width='stretch')
         
         dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
         # Added text_auto='.0f' for data labels
-        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="2026 Incidents by Department", text_auto='.0f')
+        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text_auto='.0f')
         st.plotly_chart(fig_dept, width='stretch')
 
     with tabs[1]: 
