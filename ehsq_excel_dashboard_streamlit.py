@@ -74,12 +74,34 @@ with tabs[0]:
 with tabs[1]: 
     st.subheader("Compliance & Reporting Trends")
     c1, c2 = st.columns(2)
+    
+    # --- FSI Chart ---
     fsi_df = data["FSI"]
-    fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True)
+    fig_fsi = px.line(
+        fsi_df, 
+        x=fsi_df.columns[0], 
+        y=fsi_df.columns[4], 
+        title="FSI % On Time", 
+        markers=True,
+        text=fsi_df.columns[4] # Use the Y-axis column for labels
+    )
+    # Format labels as whole number percentages
+    fig_fsi.update_traces(texttemplate='%{text:.0%}', textposition='top center')
     fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
     c1.plotly_chart(fig_fsi, use_container_width=True)
+    
+    # --- CAPA Chart ---
     capa_df = data["CAPAs"]
-    fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
+    fig_capa = px.line(
+        capa_df, 
+        x=capa_df.columns[0], 
+        y=capa_df.columns[4], 
+        title="CAPA % On Time", 
+        markers=True,
+        text=capa_df.columns[4] # Use the Y-axis column for labels
+    )
+    # Format labels as whole number percentages
+    fig_capa.update_traces(texttemplate='%{text:.0%}', textposition='top center')
     fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
     c2.plotly_chart(fig_capa, use_container_width=True)
 
