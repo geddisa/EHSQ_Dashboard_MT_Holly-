@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Dashboard Setup
 st.set_page_config(layout="wide", page_title="EHSQ Performance Dashboard")
 st.title("EHSQ Performance Dashboard")
 
@@ -18,6 +17,7 @@ def load_all_data():
         return df
 
     try:
+        # Load sheets. If your Excel file has a title row, add skiprows=1 here.
         return {
             "Incidents": clean_columns(pd.read_excel(incident_path, sheet_name="Sheet1")),
             "FSI": clean_columns(pd.read_excel(metrics_path, sheet_name="FSI Reports", skiprows=1)),
@@ -36,10 +36,16 @@ data = load_all_data()
 if data:
     df = data["Incidents"]
     
-    # FIX: Robust date parsing
-    # Use errors='coerce' to turn bad data into NaT, then drop those rows
-    df['Date'] = pd.to_datetime(df.iloc[:, 0], errors='coerce')
-    df = df.dropna(subset=['Date']) 
+    # --- FIX: USE THE EXACT DATE COLUMN NAME ---
+    # Based on your script, it is 'Date of Incident (UTC)'
+    # If this fails, check your columns list by uncommenting the line below:
+    # st.write(df.columns.tolist())
+    
+    date_col = 'Date of Incident (UTC)' 
+    df['Date'] = pd.to_datetime(df[date_col], errors='coerce')
+    
+    # We only drop rows that are strictly NaT, but keep rows with valid data
+    df = df.dropna(subset=['Date'])
     df['Week'] = df['Date'].dt.isocalendar().week
 
     tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
@@ -47,6 +53,7 @@ if data:
     with tabs[0]: 
         st.subheader("Incident Severity Tracking")
         
+        # Severity Calculation
         severity_mapping = {
             'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
             'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
@@ -66,61 +73,33 @@ if data:
 
         col1, col2 = st.columns(2)
         type_counts = df.groupby('Type').size().reset_index(name='Count')
-        fig_type = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f')
-        col1.plotly_chart(fig_type, use_container_width=True)
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text_auto='.0f'), use_container_width=True)
         
         dept_counts = df.groupby(['Department', 'Type']).size().reset_index(name='Count')
-        fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department & Type", barmode='group', text_auto='.0f')
-        st.plotly_chart(fig_dept, use_container_width=True)
+        st.plotly_chart(px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department & Type", barmode='group', text_auto='.0f'), use_container_width=True)
 
     with tabs[1]: 
         st.subheader("Compliance & Reporting Trends")
         c1, c2 = st.columns(2)
-        df_fsi = data["FSI"].dropna(subset=[data["FSI"].columns[4]])
-        fig_fsi = px.line(df_fsi, x=df_fsi.columns[0], y=df_fsi.columns[4], title="FSI % On Time", markers=True)
-        fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red")
-        c1.plotly_chart(fig_fsi, use_container_width=True)
-        
-        df_capa = data["CAPAs"].dropna(subset=[data["CAPAs"].columns[4]])
-        fig_capa = px.line(df_capa, x=df_capa.columns[0], y=df_capa.columns[4], title="CAPA % On Time", markers=True)
-        fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red")
-        c2.plotly_chart(fig_capa, use_container_width=True)
+        c1.plotly_chart(px.line(data["FSI"].dropna(subset=[data["FSI"].columns[4]]), x=data["FSI"].columns[0], y=data["FSI"].columns[4], title="FSI % On Time").add_hline(y=1.0, line_dash="dash", line_color="red"), use_container_width=True)
+        c2.plotly_chart(px.line(data["CAPAs"].dropna(subset=[data["CAPAs"].columns[4]]), x=data["CAPAs"].columns[0], y=data["CAPAs"].columns[4], title="CAPA % On Time").add_hline(y=0.8, line_dash="dash", line_color="red"), use_container_width=True)
 
     with tabs[2]: 
         st.subheader("Housekeeping Status by Department")
-        hk_data = df.groupby(['Department', 'Status']).size().reset_index(name='Count')
-        fig_hk = px.bar(hk_data, x='Department', y='Count', color='Status', barmode='group', title="Status Tracking", text_auto='.0f')
-        st.plotly_chart(fig_hk, use_container_width=True)
+        st.plotly_chart(px.bar(df.groupby(['Department', 'Status']).size().reset_index(name='Count'), x='Department', y='Count', color='Status', barmode='group', title="Status Tracking", text_auto='.0f'), use_container_width=True)
 
     with tabs[3]: 
         st.subheader("Safe Observations Tracking")
         c1, c2, c3 = st.columns(3)
         c1.metric("Leadership Obs", len(data["Lead_Obs"]))
         c2.metric("GS Obs", len(data["GS_Obs"]))
-        hseq_filtered = data["HSEQ_Obs"]
-        hseq_filtered = hseq_filtered[hseq_filtered['Auditor_Name'] != 'Maddi'] if 'Auditor_Name' in hseq_filtered.columns else hseq_filtered
-        c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_filtered))
+        hseq_df = data["HSEQ_Obs"]
+        c3.metric("HSEQ Obs (Excl. Maddi)", len(hseq_df[hseq_df['Auditor_Name'] != 'Maddi']))
 
     with tabs[4]: 
         st.subheader("Risk Mitigation Progress")
         total_risk = len(df)
         completed = len(df[df['Status'].isin(['Completed On Time', 'Completed Late'])])
         in_progress = len(df[df['Status'].isin(['In Draft', 'In Review'])])
-        need_info = max(0, total_risk - (completed + in_progress))
-
-        def display_custom_metric(label, value, color):
-            st.markdown(f"""<div style="border: 1px solid #e6e6e6; padding: 10px; border-radius: 5px; text-align: center;">
-                <div style="font-size: 0.9rem; color: #808495;">{label}</div>
-                <div style="font-size: 2rem; font-weight: 600; color: {color};">{value}</div></div>""", unsafe_allow_html=True)
-
-        m1, m2, m3, m4 = st.columns(4)
-        with m1: display_custom_metric("Total Risk", total_risk, "#0000FF")
-        with m2: display_custom_metric("Completed", completed, "#008000")
-        with m3: display_custom_metric("In Progress", in_progress, "#FFD700")
-        with m4: display_custom_metric("Need More Info", need_info, "#FF0000")
-        
-        st.divider()
         st.write("### Edit Incident Status")
-        df_edit = st.data_editor(df, column_config={
-            "Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True)
-        }, hide_index=True, use_container_width=True)
+        df_edit = st.data_editor(df, column_config={"Status": st.column_config.SelectboxColumn("Status", options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], required=True)}, hide_index=True, use_container_width=True)
