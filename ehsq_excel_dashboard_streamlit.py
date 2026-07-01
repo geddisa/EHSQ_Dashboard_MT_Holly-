@@ -124,8 +124,7 @@ with tabs[3]:
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
     
-    # 1. Metric values
-    # Total: 259 (Blue), Completed: 251 (Green), In Progress: 3 (Orange), Need Info: 5 (Red)
+    # Metrics display
     st.markdown("""
         <style>
         .metric-box { padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; font-size: 1.2em; }
@@ -140,10 +139,23 @@ with tabs[4]:
     
     st.divider()
     
+    # 1. Select exactly the columns you requested
+    # Ensure these names match your Excel file headers exactly
+    cols_to_display = [
+        "Incident", 
+        "Assigned To", 
+        "Status", 
+        "Type", 
+        "Department", 
+        "Due Date", 
+        "Description"
+    ]
+    df_filtered = df_raw[cols_to_display].copy()
+    
     # 2. Interactive Editor
     st.caption("Update Status Below:")
     st.data_editor(
-        df_raw, 
+        df_filtered, 
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status", 
