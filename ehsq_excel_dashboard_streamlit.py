@@ -94,16 +94,12 @@ if data:
         c1, c2 = st.columns(2)
         
         fsi_df = data["FSI"]
-        # Added text parameter and update_traces for FSI data labels
-        fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True, text=fsi_df.columns[4])
-        fig_fsi.update_traces(textposition="top center")
+        fig_fsi = px.line(fsi_df, x=fsi_df.columns[0], y=fsi_df.columns[4], title="FSI % On Time", markers=True)
         fig_fsi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Target 100%")
         c1.plotly_chart(fig_fsi, use_container_width=True)
         
         capa_df = data["CAPAs"]
-        # Added text parameter and update_traces for CAPA data labels
-        fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True, text=capa_df.columns[4])
-        fig_capa.update_traces(textposition="top center")
+        fig_capa = px.line(capa_df, x=capa_df.columns[0], y=capa_df.columns[4], title="CAPA % On Time", markers=True)
         fig_capa.add_hline(y=0.8, line_dash="dash", line_color="red", annotation_text="Target 80%")
         c2.plotly_chart(fig_capa, use_container_width=True)
 
@@ -135,24 +131,10 @@ if data:
         m4.metric("Need More Info", need_info)
         
         st.divider()
-        
-        # Data Editor Block with Selectbox Column
-        st.data_editor(
-            df_raw, 
-            column_config={
-                "Status": st.column_config.SelectboxColumn(
-                    "Status",
-                    help="Update the mitigation status",
-                    options=[
-                        "In Draft",
-                        "In Review",
-                        "Completed On Time",
-                        "Completed Late",
-                        "Need Info"
-                    ],
-                    required=True,
-                )
-            },
-            hide_index=True,
-            use_container_width=True
-        )
+        st.data_editor(df_raw, column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status", 
+                options=['Completed On Time', 'Completed Late', 'In Draft', 'In Review', 'Need Info'], 
+                required=True
+            )
+        }, hide_index=True, use_container_width=True)
