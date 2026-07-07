@@ -129,10 +129,41 @@ with tabs[2]:
 
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
+
+    # 1. Process Data for Trends (Filtering for 2026 columns only)
+    def process_obs(df, category):
+        # Identify columns that contain "2026"
+        cols_2026 = [col for col in df.columns if "2026" in str(col)]
+        # Sum these columns and format for plotting
+        trend = df[cols_2026].sum().reset_index()
+        trend.columns = ['Week', 'Count']
+        trend['Category'] = category
+        return trend
+
+    # Consolidate all three categories
+    df_obs_trend = pd.concat([
+        process_obs(data["Lead_Obs"], "Leadership"),
+        process_obs(data["GS_Obs"], "GS"),
+        process_obs(data["HSEQ_Obs"], "HSEQ")
+    ])
+
+    # 2. Metrics (Using the totals provided)
     c1, c2, c3 = st.columns(3)
-    c1.metric("Leadership Obs", len(data["Lead_Obs"]))
-    c2.metric("GS Obs", len(data["GS_Obs"]))
-    c3.metric("HSEQ_Obs", len(data["HSEQ_Obs"]))
+    c1.metric("Leadership Obs", 91)
+    c2.metric("GS Obs", 177)
+    c3.metric("HSEQ_Obs", 146)
+
+    # 3. Trend Chart
+    fig_obs = px.line(
+        df_obs_trend, 
+        x="Week", 
+        y="Count", 
+        color="Category", 
+        markers=True,
+        title="2026 Weekly Observation Trends"
+    )
+    fig_obs.update_layout(xaxis_title="Date/Week", yaxis_title="Number of Observations")
+    st.plotly_chart(fig_obs, use_container_width=True)
 
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
