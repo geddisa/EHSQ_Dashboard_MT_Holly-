@@ -67,29 +67,52 @@ with tabs[2]:
 
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
-    
+
+    # 1. Metrics - Totals
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Leadership Obs", 91)
+    c2.metric("GS Obs", 177)
+    c3.metric("HSEQ_Obs", 146)
+
+    # 2. Trend Logic
     def get_weekly_trend(df, category):
-        # Dynamically find columns that contain the word 'Week'
+        # Dynamically find columns that contain 'Week'
         week_cols = [c for c in df.columns if 'Week' in str(c)]
-        # Sum numeric values in these columns
+        # Sum numeric values, handle non-numeric with coerce
         trend = df[week_cols].apply(pd.to_numeric, errors='coerce').sum().reset_index()
         trend.columns = ['Week', 'Count']
         trend['Category'] = category
         return trend
 
+    # Consolidate all categories
     df_trends = pd.concat([
         get_weekly_trend(data["Lead_Obs"], "Leadership"),
         get_weekly_trend(data["GS_Obs"], "GS"),
         get_weekly_trend(data["HSEQ_Obs"], "HSEQ")
     ])
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Leadership Obs", 91)
-    c2.metric("GS Obs", 177)
-    c3.metric("HSEQ_Obs", 146)
+    # 3. Enhanced Trend Chart with Data Labels
+    fig_obs = px.line(
+        df_trends, 
+        x="Week", 
+        y="Count", 
+        color="Category", 
+        markers=True,
+        text="Count",  # This enables data labels
+        title="Weekly Trends (All Categories)"
+    )
     
-    fig_obs = px.line(df_trends, x="Week", y="Count", color="Category", markers=True, title="Weekly Trends (All Weeks)")
+    # Position labels above the points
+    fig_obs.update_traces(textposition="top center")
+    
+    # Ensure all weeks are shown on X-axis and lines are distinct
+    fig_obs.update_layout(
+        xaxis=dict(tickmode='linear'),
+        hovermode="x unified"
+    )
+    
     st.plotly_chart(fig_obs, use_container_width=True)
+    
 
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
