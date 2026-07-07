@@ -17,19 +17,14 @@ with col_title:
 
 # --- NO-CACHE DATA LOADING ---
 def load_all_data():
-    files = {
-        "Incidents": ("IncidentReports_All_MTH_2026-07-01.xlsx", "Sheet1", 0),
-        "FSI": ("EHSQ Metrics.xlsx", "FSI Reports", 1),
-        "CAPAs": ("EHSQ Metrics.xlsx", "CAPAs", 1),
-        "Lead_Obs": ("Audit Schedule - Internal - LPA.xlsx", "Safe Obs - Leadership", 0),
-        "GS_Obs": ("Audit Schedule - Internal - LPA.xlsx", "Safe Obs - GS and EHS", 0),
-        "HSEQ_Obs": ("Audit Schedule - Internal - LPA.xlsx", "Safe Obs GS EHS", 0)
+    # Load the same file for all three observation types
+    file_path = "Audit Schedule - Internal - LPA.xlsx"
+    data = {
+        "Lead_Obs": pd.read_excel(file_path, sheet_name="Safe Obs - Leadership"),
+        "GS_Obs": pd.read_excel(file_path, sheet_name="Safe Obs - GS and EHS"),
+        "HSEQ_Obs": pd.read_excel(file_path, sheet_name="Safe Obs GS EHS")
     }
-    data = {}
-    for key, (file, sheet, skip) in files.items():
-        data[key] = pd.read_excel(file, sheet_name=sheet, skiprows=skip)
     return data
-
 try:
     data = load_all_data()
 except Exception as e:
