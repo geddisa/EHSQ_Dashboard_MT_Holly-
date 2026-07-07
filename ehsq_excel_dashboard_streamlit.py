@@ -1,25 +1,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go 
 
 # --- DASHBOARD SETUP ---
 st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
 
-col_logo, col_title = st.columns([1, 6], vertical_alignment="center")
-with col_logo:
-    try:
-        st.image("Company_Logo.png", width=200)
-    except:
-        st.write("Logo missing")
-with col_title:
-    st.markdown("<h1 style='margin-bottom: 0; padding-top: 0;'>EHSQ KPI Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>EHSQ KPI Dashboard</h1>", unsafe_allow_html=True)
 
 # --- DATA LOADING ---
+@st.cache_data
 def load_all_data():
-    # Adjusted skiprows based on your file structure
     path_lpa = "Audit Schedule - Internal - LPA.xlsx"
-    data = {
+    return {
         "Incidents": pd.read_excel("IncidentReports_All_MTH_2026-07-01.xlsx", sheet_name="Sheet1"),
         "FSI": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="FSI Reports", skiprows=1),
         "CAPAs": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="CAPAs", skiprows=1),
@@ -27,7 +19,6 @@ def load_all_data():
         "GS_Obs": pd.read_excel(path_lpa, sheet_name="Safe Obs - GS and EHS", skiprows=2),
         "HSEQ_Obs": pd.read_excel(path_lpa, sheet_name="Safe Obs GS EHS", skiprows=2)
     }
-    return data
 
 try:
     data = load_all_data()
@@ -46,17 +37,18 @@ tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "
 with tabs[0]: 
     st.subheader("Incident Breakdown")
     col1, col2 = st.columns(2)
-    type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
-    fig = px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text='Count')
-    col1.plotly_chart(fig, use_container_width=True)
-    
-    dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
-    fig_dept = px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count')
-    col2.plotly_chart(fig_dept, use_container_width=True)
+    # Ensure data exists before plotting
+    if not df_2026.empty:
+        type_counts = df_2026.groupby('Type').size().reset_index(name='Count')
+        col1.plotly_chart(px.bar(type_counts, x='Type', y='Count', title="Incidents by Type", text='Count'), use_container_width=True)
+        
+        dept_counts = df_2026.groupby(['Department', 'Type']).size().reset_index(name='Count')
+        col2.plotly_chart(px.bar(dept_counts, x='Department', y='Count', color='Type', title="Incidents by Department", text='Count'), use_container_width=True)
 
 with tabs[1]: 
     st.subheader("Compliance & Reporting Trends")
     c1, c2 = st.columns(2)
+    # Using iloc to dynamically grab columns based on your provided structure
     c1.plotly_chart(px.line(data["FSI"], x=data["FSI"].columns[0], y=data["FSI"].columns[4], title="FSI % On Time"), use_container_width=True)
     c2.plotly_chart(px.line(data["CAPAs"], x=data["CAPAs"].columns[0], y=data["CAPAs"].columns[4], title="CAPA % On Time"), use_container_width=True)
 
@@ -67,48 +59,28 @@ with tabs[2]:
 
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
-
-    # 1. Metrics - Displaying your provided totals
     c1, c2, c3 = st.columns(3)
     c1.metric("Leadership Obs", 91)
     c2.metric("GS Obs", 177)
     c3.metric("HSEQ_Obs", 146)
 
-    # 2. Trend Logic: Clean and aggregate
     def prepare_trend_data(df, category):
-        # We look for columns labeled "Week" (case insensitive)
         week_cols = [c for c in df.columns if 'Week' in str(c)]
-        # Sum the values across the rows (for all employees/areas)
         trend = df[week_cols].apply(pd.to_numeric, errors='coerce').sum().reset_index()
         trend.columns = ['Week', 'Count']
         trend['Category'] = category
         return trend
 
-    # Consolidate trends for all categories
-    df_trends = pd.concat([
-        prepare_trend_data(data["Lead_Obs"], "Leadership"),
-        prepare_trend_data(data["GS_Obs"], "GS"),
-        prepare_trend_data(data["HSEQ_Obs"], "HSEQ")
-    ])
-
-    # 3. Enhanced Trend Chart
-    fig_obs = px.line(
-        df_trends, 
-        x="Week", 
-        y="Count", 
-        color="Category", 
-        markers=True, 
-        text="Count", # Data labels on the chart
-        title="Weekly Observation Trends by Category"
-    )
+    df_trends = pd.concat([prepare_trend_data(data[key], name) for key, name in 
+                           zip(["Lead_Obs", "GS_Obs", "HSEQ_Obs"], ["Leadership", "GS", "HSEQ"])])
     
-    fig_obs.update_traces(textposition="top center")
+    fig_obs = px.line(df_trends, x="Week", y="Count", color="Category", markers=True, title="Weekly Observation Trends")
     fig_obs.update_layout(hovermode="x unified")
-    
     st.plotly_chart(fig_obs, use_container_width=True)
-    
 
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
     cols_to_display = ["Incident", "Assigned To", "Status", "Type", "Department", "Due Date", "Description"]
-    st.data_editor(df_raw[cols_to_display].dropna(subset=["Status"]), hide_index=True, use_container_width=True)
+    # Filter for non-empty status and display
+    display_df = df_raw[cols_to_display].dropna(subset=["Status"])
+    st.data_editor(display_df, hide_index=True, use_container_width=True, disabled=["Incident", "Type", "Department"])
