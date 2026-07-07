@@ -68,48 +68,42 @@ with tabs[2]:
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
 
-    # 1. Metrics - Totals
+    # 1. Metrics - Displaying your provided totals
     c1, c2, c3 = st.columns(3)
     c1.metric("Leadership Obs", 91)
     c2.metric("GS Obs", 177)
     c3.metric("HSEQ_Obs", 146)
 
-    # 2. Trend Logic
-    def get_weekly_trend(df, category):
-        # Dynamically find columns that contain 'Week'
+    # 2. Trend Logic: Clean and aggregate
+    def prepare_trend_data(df, category):
+        # We look for columns labeled "Week" (case insensitive)
         week_cols = [c for c in df.columns if 'Week' in str(c)]
-        # Sum numeric values, handle non-numeric with coerce
+        # Sum the values across the rows (for all employees/areas)
         trend = df[week_cols].apply(pd.to_numeric, errors='coerce').sum().reset_index()
         trend.columns = ['Week', 'Count']
         trend['Category'] = category
         return trend
 
-    # Consolidate all categories
+    # Consolidate trends for all categories
     df_trends = pd.concat([
-        get_weekly_trend(data["Lead_Obs"], "Leadership"),
-        get_weekly_trend(data["GS_Obs"], "GS"),
-        get_weekly_trend(data["HSEQ_Obs"], "HSEQ")
+        prepare_trend_data(data["Lead_Obs"], "Leadership"),
+        prepare_trend_data(data["GS_Obs"], "GS"),
+        prepare_trend_data(data["HSEQ_Obs"], "HSEQ")
     ])
 
-    # 3. Enhanced Trend Chart with Data Labels
+    # 3. Enhanced Trend Chart
     fig_obs = px.line(
         df_trends, 
         x="Week", 
         y="Count", 
         color="Category", 
-        markers=True,
-        text="Count",  # This enables data labels
-        title="Weekly Trends (All Categories)"
+        markers=True, 
+        text="Count", # Data labels on the chart
+        title="Weekly Observation Trends by Category"
     )
     
-    # Position labels above the points
     fig_obs.update_traces(textposition="top center")
-    
-    # Ensure all weeks are shown on X-axis and lines are distinct
-    fig_obs.update_layout(
-        xaxis=dict(tickmode='linear'),
-        hovermode="x unified"
-    )
+    fig_obs.update_layout(hovermode="x unified")
     
     st.plotly_chart(fig_obs, use_container_width=True)
     
