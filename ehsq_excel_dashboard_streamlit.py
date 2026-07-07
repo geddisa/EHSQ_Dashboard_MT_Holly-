@@ -130,28 +130,30 @@ with tabs[2]:
 with tabs[3]: 
     st.subheader("Safe Observations Tracking")
 
-    # 1. Process Data for Trends (Filtering for 2026 columns only)
-    def process_obs(df, category):
-        # Identify columns that contain "2026"
-        cols_2026 = [col for col in df.columns if "2026" in str(col)]
-        # Sum these columns and format for plotting
-        trend = df[cols_2026].sum().reset_index()
-        trend.columns = ['Week', 'Count']
-        trend['Category'] = category
-        return trend
-
-    # Consolidate all three categories
-    df_obs_trend = pd.concat([
-        process_obs(data["Lead_Obs"], "Leadership"),
-        process_obs(data["GS_Obs"], "GS"),
-        process_obs(data["HSEQ_Obs"], "HSEQ")
-    ])
-
-    # 2. Metrics (Using the totals provided)
+    # 1. Metrics - Totals as requested
     c1, c2, c3 = st.columns(3)
     c1.metric("Leadership Obs", 91)
     c2.metric("GS Obs", 177)
     c3.metric("HSEQ_Obs", 146)
+
+    # 2. Trend Logic
+    # We use a helper function to aggregate all numeric columns 
+    # (assuming your weekly observation counts are numeric)
+    def prepare_trend_data(df, category):
+        # Select numeric columns only, excluding identifiers if necessary
+        # If your data starts at column index 3, use .iloc[:, 3:]
+        numeric_df = df.select_dtypes(include=['number'])
+        trend = numeric_df.sum().reset_index()
+        trend.columns = ['Week', 'Count']
+        trend['Category'] = category
+        return trend
+
+    # Consolidate for Plotly
+    df_obs_trend = pd.concat([
+        prepare_trend_data(data["Lead_Obs"], "Leadership"),
+        prepare_trend_data(data["GS_Obs"], "GS"),
+        prepare_trend_data(data["HSEQ_Obs"], "HSEQ")
+    ])
 
     # 3. Trend Chart
     fig_obs = px.line(
@@ -162,9 +164,8 @@ with tabs[3]:
         markers=True,
         title="2026 Weekly Observation Trends"
     )
-    fig_obs.update_layout(xaxis_title="Date/Week", yaxis_title="Number of Observations")
     st.plotly_chart(fig_obs, use_container_width=True)
-
+    
 with tabs[4]: 
     st.subheader("Risk Mitigation Progress")
     st.markdown("""
