@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # --- DASHBOARD SETUP ---
-st.set_page_config(layout="wide", page_title="MT. Holly | EHSQ KPI Dashboard")
+st.set_page_config(layout="wide", page_title="EHSQ KPI Dashboard")
 
 st.markdown("<h1 style='text-align: center;'>EHSQ KPI Dashboard</h1>", unsafe_allow_html=True)
 
