@@ -10,10 +10,22 @@ st.set_page_config(
     page_title="EHSQ KPI Dashboard"
 )
 
-st.markdown(
-    "<h1 style='text-align:center;'>EHSQ KPI Dashboard</h1>",
-    unsafe_allow_html=True
-)
+# -----------------------------------------------------
+# HEADER SECTION WITH LOGO
+# -----------------------------------------------------
+# Create two columns: a smaller one for the logo and a larger one for the title
+header_left, header_right = st.columns([1, 4])
+
+with header_left:
+    # Adjust width as needed to fit perfectly on your screen
+    st.image("century_logo.png", use_container_width=True)
+
+with header_right:
+    # Left-aligned to sit cleanly next to the brand logo
+    st.markdown(
+        "<h1 style='margin-top: 10px;'>EHSQ KPI Dashboard</h1>",
+        unsafe_allow_html=True
+    )
 
 # =====================================================
 # LOAD DATA
@@ -142,8 +154,7 @@ with tab1:
             title="Incidents by Department"
         )
 
-        # Fixed: Text position set to inside with an explicit template 
-        # to prevent squishing or upside-down numbers on small segments.
+        # Fixed text layout strategy
         fig_dept.update_traces(
             textposition="inside",
             texttemplate="%{text}"
@@ -153,6 +164,7 @@ with tab1:
             fig_dept,
             use_container_width=True
         )
+
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
@@ -343,7 +355,6 @@ with tab4:
 with tab5:
     st.subheader("Risk Mitigation Progress")
 
-    # Define the columns we want to see
     cols_to_display = [
         "Incident",
         "Assigned To",
@@ -354,18 +365,13 @@ with tab5:
         "Description"
     ]
 
-    # Ensure all required columns exist to avoid KeyErrors
     for col in cols_to_display:
         if col not in df_raw.columns:
             df_raw[col] = ""
 
-    # Keep the original statuses intact instead of dropping them
     display_df = df_raw[cols_to_display].copy()
-    
-    # Fill any genuinely blank/NaN status cells with "Open" so the dropdown doesn't break
     display_df["Status"] = display_df["Status"].fillna("Open")
 
-    # Display the interactive data editor
     edited_df = st.data_editor(
         display_df,
         hide_index=True,
@@ -400,15 +406,12 @@ with tab5:
     # Save Updates back to the Main Source File
     # -----------------------------------------
     if st.button("Save Status Updates"):
-        # 1. Update our main df_raw with the newly edited statuses
         df_raw["Status"] = edited_df["Status"]
         
-        # 2. Drop the temporary 'Date' helper column we created for filtering
         if "Date" in df_raw.columns:
             df_raw = df_raw.drop(columns=["Date"])
 
-        # 3. Save directly back to your primary incident data source file
-        main_incident_file = "IncidentReports_All_MTH_2026-07-01.xlsx"
+        main_incident_file = "IncidentReports_All_MTH_2026-07-14.xlsx"
         
         try:
             df_raw.to_excel(
@@ -421,8 +424,6 @@ with tab5:
                 f"Status updates saved and applied successfully to {main_incident_file}! "
                 "Clear your Streamlit cache or restart to see changes fully refresh."
             )
-            
-            # Clear the cache automatically so the app reloads the freshly saved file
             st.cache_data.clear()
             
         except Exception as save_error:
