@@ -339,6 +339,7 @@ with tab4:
 with tab5:
     st.subheader("Risk Mitigation Progress")
 
+    # Define the columns we want to see
     cols_to_display = [
         "Incident",
         "Assigned To",
@@ -349,12 +350,18 @@ with tab5:
         "Description"
     ]
 
-    display_df = (
-        df_raw[cols_to_display]
-        .dropna(subset=["Status"])
-        .copy()
-    )
+    # Ensure all required columns exist to avoid KeyErrors
+    for col in cols_to_display:
+        if col not in df_raw.columns:
+            df_raw[col] = ""
 
+    # Keep the original statuses intact instead of dropping them
+    display_df = df_raw[cols_to_display].copy()
+    
+    # Fill any genuinely blank/NaN status cells with "Open" so the dropdown doesn't break
+    display_df["Status"] = display_df["Status"].fillna("Open")
+
+    # Display the interactive data editor
     edited_df = st.data_editor(
         display_df,
         hide_index=True,
@@ -386,16 +393,33 @@ with tab5:
     )
 
     # -----------------------------------------
-    # Save Updates
+    # Save Updates back to the Main Source File
     # -----------------------------------------
     if st.button("Save Status Updates"):
+        # 1. Update our main df_raw with the newly edited statuses
+        df_raw["Status"] = edited_df["Status"]
+        
+        # 2. Drop the temporary 'Date' helper column we created for filtering
+        if "Date" in df_raw.columns:
+            df_raw = df_raw.drop(columns=["Date"])
 
-        edited_df.to_excel(
-            "Updated_Risk_Mitigation.xlsx",
-            index=False
-        )
-
-        st.success(
-            "Status updates saved successfully to "
-            "Updated_Risk_Mitigation.xlsx"
-        )
+        # 3. Save directly back to your primary incident data source file
+        main_incident_file = "IncidentReports_All_MTH_2026-07-01.xlsx"
+        
+        try:
+            df_raw.to_excel(
+                main_incident_file,
+                sheet_name="Sheet1",
+                index=False
+            )
+            
+            st.success(
+                f"Status updates saved and applied successfully to {main_incident_file}! "
+                "Clear your Streamlit cache or restart to see changes fully refresh."
+            )
+            
+            # Clear the cache automatically so the app reloads the freshly saved file
+            st.cache_data.clear()
+            
+        except Exception as save_error:
+            st.error(f"Could not write to file. Ensure the Excel file isn't open elsewhere: {save_error}")
