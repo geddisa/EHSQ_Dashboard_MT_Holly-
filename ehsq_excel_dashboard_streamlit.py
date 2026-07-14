@@ -142,10 +142,16 @@ with tab1:
             title="Incidents by Department"
         )
 
-        # Forces text inside the blocks cleanly and prevents text distortion
+        # Fixed: Text position set to inside with an explicit template 
+        # to prevent squishing or upside-down numbers on small segments.
         fig_dept.update_traces(
             textposition="inside",
             texttemplate="%{text}"
+        )
+
+        col2.plotly_chart(
+            fig_dept,
+            use_container_width=True
         )
 # =====================================================
 # TAB 2 - COMPLIANCE
