@@ -142,13 +142,11 @@ with tab1:
             title="Incidents by Department"
         )
 
-        fig_dept.update_traces(textposition="outside")
-
-        col2.plotly_chart(
-            fig_dept,
-            use_container_width=True
+        # Forces text inside the blocks cleanly and prevents text distortion
+        fig_dept.update_traces(
+            textposition="inside",
+            texttemplate="%{text}"
         )
-
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
