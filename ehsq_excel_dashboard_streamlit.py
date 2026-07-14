@@ -76,7 +76,7 @@ df_2026 = df_raw[
 ].copy()
 
 # =====================================================
-# TABS
+# TABS SETUP & UNPACKING
 # =====================================================
 tabs = st.tabs([
     "Overview",
@@ -86,10 +86,13 @@ tabs = st.tabs([
     "Risk Mitigation"
 ])
 
+tab1, tab2, tab3, tab4, tab5 = tabs
+
 # =====================================================
 # TAB 1 - OVERVIEW
 # =====================================================
-with tabsst.subheader("Incident Breakdown")
+with tab1:
+    st.subheader("Incident Breakdown")
 
     col1, col2 = st.columns(2)
 
@@ -149,7 +152,8 @@ with tabsst.subheader("Incident Breakdown")
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
-with tabsst.subheader("Compliance & Reporting Trends")
+with tab2:
+    st.subheader("Compliance & Reporting Trends")
 
     c1, c2 = st.columns(2)
 
@@ -198,7 +202,8 @@ with tabsst.subheader("Compliance & Reporting Trends")
 # =====================================================
 # TAB 3 - HOUSEKEEPING
 # =====================================================
-with tabsst.subheader("Housekeeping Status")
+with tab3:
+    st.subheader("Housekeeping Status")
 
     hk_data = (
         df_2026.groupby(
@@ -230,7 +235,8 @@ with tabsst.subheader("Housekeeping Status")
 # =====================================================
 # TAB 4 - SAFE OBSERVATIONS
 # =====================================================
-with tabsst.subheader("Safe Observations Tracking")
+with tab4:
+    st.subheader("Safe Observations Tracking")
 
     c1, c2, c3 = st.columns(3)
 
@@ -330,7 +336,8 @@ with tabsst.subheader("Safe Observations Tracking")
 # =====================================================
 # TAB 5 - RISK MITIGATION
 # =====================================================
-with tabsst.subheader("Risk Mitigation Progress")
+with tab5:
+    st.subheader("Risk Mitigation Progress")
 
     cols_to_display = [
         "Incident",
