@@ -352,20 +352,44 @@ with tab4:
         fig_obs,
         use_container_width=True
     )
-
-# =====================================================
-# TAB 5 - RISK MITIGATION
-# =====================================================
+    
 # =====================================================
 # TAB 5 - RISK MITIGATION
 # =====================================================
 with tab5:
     st.subheader("Risk Mitigation")
     
-    # Load the data
     risk_df = data["Risk_Mitigation"]
     
-    # Display the data in an editor
+    # 1. Calculate counts for each status
+    # We use .get() with 0 to handle cases where a status might not exist in the data
+    status_counts = risk_df['Status'].value_counts()
+    
+    # Define mapping for colors (using HTML/CSS colors for style)
+    # Note: Streamlit's st.metric doesn't have a direct 'color' param, 
+    # so we use markdown and CSS for custom coloring.
+    
+    def display_metric(label, value, color):
+        st.markdown(
+            f"""
+            <div style="background-color: {color}; padding: 10px; border-radius: 5px; text-align: center; color: white; font-weight: bold;">
+                {label}<br><span style="font-size: 24px;">{value}</span>
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+    # 2. Display the counters in a row
+    cols = st.columns(6)
+    with cols[0]: display_metric("Completed On Time", status_counts.get("Completed On Time", 0), "#28a745") # Green
+    with cols[1]: display_metric("In Draft", status_counts.get("In Draft", 0), "#fd7e14") # Orange
+    with cols[2]: display_metric("Rejected", status_counts.get("Rejected", 0), "#dc3545") # Red
+    with cols[3]: display_metric("In Review", status_counts.get("In Review", 0), "#17a2b8") # Light Blue
+    with cols[4]: display_metric("Completed Late", status_counts.get("Completed Late", 0), "#f8d7da") # Light Red (text will be dark if needed)
+    with cols[5]: display_metric("Draft Overdue", status_counts.get("Draft Overdue", 0), "#6c757d") # Gray (added for completeness)
+
+    st.markdown("---") # Divider
+
+    # 3. Display the editor
     edited_risk_df = st.data_editor(
         risk_df,
         use_container_width=True,
@@ -373,15 +397,7 @@ with tab5:
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
-                # Updated to match the exact values from your Excel sheet
-                options=[
-                    "In Review", 
-                    "Completed On Time", 
-                    "In Draft", 
-                    "Rejected", 
-                    "Draft Overdue", 
-                    "Completed Late"
-                ],
+                options=["Completed On Time", "In Draft", "Rejected", "In Review", "Completed Late", "Draft Overdue"],
                 required=True
             )
         }
