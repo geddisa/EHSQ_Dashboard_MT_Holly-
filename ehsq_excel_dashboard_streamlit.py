@@ -359,12 +359,25 @@ with tab4:
 with tab5:
     st.subheader("Risk Mitigation Progress")
 
-    # 1. Define your initial dataframe first
-    # Use display_df (the one you defined before the editor) to get the initial counts
-    # so the app doesn't crash on the first run.
+    # 1. PREPARE THE DATA FIRST (This must happen inside tab5 or before it)
+    cols_to_display = [
+        "Incident", "Assigned To", "Status", "Type", 
+        "Department", "Due Date", "Description"
+    ]
+
+    # Ensure columns exist
+    for col in cols_to_display:
+        if col not in df_raw.columns:
+            df_raw[col] = ""
+
+    # Create display_df (This fixes your NameError)
+    display_df = df_raw[cols_to_display].copy()
+    display_df["Status"] = display_df["Status"].fillna("Open")
+
+    # 2. CALCULATE METRICS
     status_counts = display_df["Status"].value_counts()
 
-    # 2. Display the metrics using the counts from the source dataframe
+    # 3. DISPLAY METRICS
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Completed", status_counts.get("Completed", 0))
@@ -377,8 +390,7 @@ with tab5:
 
     st.markdown("---")
 
-    # 3. Create the data editor
-    # Assign the result back to 'edited_df' here
+    # 4. DISPLAY EDITOR
     edited_df = st.data_editor(
         display_df,
         hide_index=True,
@@ -397,6 +409,7 @@ with tab5:
         },
         disabled=["Incident", "Assigned To", "Type", "Department", "Due Date", "Description"]
     )
+
     # -----------------------------------------
     # Save Updates back to the Main Source File
     # -----------------------------------------
