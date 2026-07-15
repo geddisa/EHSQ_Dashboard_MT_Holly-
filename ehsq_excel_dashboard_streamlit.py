@@ -373,30 +373,3 @@ with tab4:
                 required=True
             )
         }
-    )
-    # -----------------------------------------
-    # Save Updates back to the Main Source File
-    # -----------------------------------------
-    if st.button("Save Status Updates"):
-        df_raw["Status"] = edited_df["Status"]
-        
-        if "Date" in df_raw.columns:
-            df_raw = df_raw.drop(columns=["Date"])
-
-        main_incident_file = "IncidentReports_All_MTH_2026-07-14.xlsx"
-        
-        try:
-            df_raw.to_excel(
-                main_incident_file,
-                sheet_name="Sheet1",
-                index=False
-            )
-            
-            st.success(
-                f"Status updates saved and applied successfully to {main_incident_file}! "
-                "Clear your Streamlit cache or restart to see changes fully refresh."
-            )
-            st.cache_data.clear()
-            
-        except Exception as save_error:
-            st.error(f"Could not write to file. Ensure the Excel file isn't open elsewhere: {save_error}")
