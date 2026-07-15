@@ -164,6 +164,47 @@ with tab1:
             fig_dept,
             use_container_width=True
         )
+    # -----------------------------------------
+    # Incident Severity Trend
+    # -----------------------------------------
+    st.subheader("Incident Severity Trend")
+
+    # Prepare data for severity graph
+    df_incidents = data["Incidents"].copy()
+    df_incidents['Date of Incident (UTC)'] = pd.to_datetime(df_incidents['Date of Incident (UTC)'])
+    df_incidents['Week'] = df_incidents['Date of Incident (UTC)'].dt.isocalendar().week
+
+    severity_mapping = {
+        'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75,
+        'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150,
+        'Other Recordable Case': 250, 'Restricted or Transferred Work': 250,
+        'Days Away From Work': 350, 'Recordable - Fatality': 600
+    }
+
+    df_incidents['Points'] = df_incidents['Injury Classification'].map(severity_mapping).fillna(
+        df_incidents['Type'].map(severity_mapping)
+    ).fillna(0)
+
+    weekly_scores = df_incidents.groupby('Week')['Points'].sum()
+    current_week = pd.Timestamp.now().isocalendar().week
+    weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (0-400)')
+    ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (401-800)')
+    ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (800+)')
+    ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', label='Weekly Severity Total')
+    
+    ax.set_title('Incident Severity Graph')
+    ax.set_xlabel('Calendar Week Number')
+    ax.set_ylabel('Total Accumulated Severity Points')
+    ax.set_ylim(0, 1250)
+    ax.set_xticks(range(1, current_week + 1))
+    ax.legend(loc='upper left')
+
+    # Display in Streamlit
+    st.pyplot(fig)
 
 # =====================================================
 # TAB 2 - COMPLIANCE
