@@ -183,15 +183,17 @@ with tab2:
     fig_fsi = px.line(
         data["FSI"],
         x=data["FSI"].columns[0],
-        y=data["FSI"].columns[4],
+        y=data["FSI"].columns[4] * 100, # Multiply by 100 to convert to 0-100 scale
         markers=True,
-        text=data["FSI"].columns[4],
+        text=data["FSI"].columns[4] * 100,
         title="FSI % On Time"
     )
 
-    fig_fsi.update_traces(textposition="top center")
+    fig_fsi.update_traces(
+        texttemplate="%{text:.0f}%", # Appends % and forces whole number
+        textposition="top center"
+    )
     
-    # Force y-axis to range 0-100 and ensure tick format is integer
     fig_fsi.update_yaxes(range=[0, 100], tickformat=".0f")
 
     c1.plotly_chart(fig_fsi, use_container_width=True)
@@ -202,15 +204,17 @@ with tab2:
     fig_capa = px.line(
         data["CAPAs"],
         x=data["CAPAs"].columns[0],
-        y=data["CAPAs"].columns[4],
+        y=data["CAPAs"].columns[4] * 100, # Multiply by 100 to convert to 0-100 scale
         markers=True,
-        text=data["CAPAs"].columns[4],
+        text=data["CAPAs"].columns[4] * 100,
         title="CAPA % On Time"
     )
 
-    fig_capa.update_traces(textposition="top center")
+    fig_capa.update_traces(
+        texttemplate="%{text:.0f}%", # Appends % and forces whole number
+        textposition="top center"
+    )
     
-    # Force y-axis to range 0-100 and ensure tick format is integer
     fig_capa.update_yaxes(range=[0, 100], tickformat=".0f")
 
     c2.plotly_chart(fig_capa, use_container_width=True)
