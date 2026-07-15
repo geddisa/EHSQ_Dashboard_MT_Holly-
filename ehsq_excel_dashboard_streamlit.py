@@ -138,7 +138,7 @@ with tab1:
             use_container_width=True
         )
 
-        # -----------------------------------------
+# -----------------------------------------
 # Incidents by Department
 # -----------------------------------------
 dept_counts = (
@@ -152,21 +152,28 @@ fig_dept = px.bar(
     x="Department",
     y="Count",
     color="Type",
-    text="Count", # Ensure this is mapped
+    text="Count", 
     title="Incidents by Department"
 )
 
-# Fix the text display
+# Update traces to force text rendering
 fig_dept.update_traces(
-    textposition="auto", # Allows Plotly to choose best position
-    texttemplate="%{text}" # Explicitly shows the count
+    textposition="inside", 
+    texttemplate="%{text}",
+    insidetextanchor="middle",
+    textfont=dict(size=10) # Shrinking font slightly can help it fit in tight bars
+)
+
+# Optional: Adjust the layout to give bars more room
+fig_dept.update_layout(
+    uniformtext_mode='hide', 
+    uniformtext_minsize=8
 )
 
 col2.plotly_chart(
     fig_dept,
     use_container_width=True
 )
-
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
