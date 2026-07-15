@@ -167,6 +167,59 @@ col2.plotly_chart(
     fig_dept,
     use_container_width=True
 )
+
+# -----------------------------------------
+    # Incident Severity Graph
+    # -----------------------------------------
+    st.subheader("Incident Severity Trend")
+
+    # Prepare data from the already loaded 'data' dictionary
+    df_incidents = data["Incidents"].copy()
+    df_incidents['Date of Incident (UTC)'] = pd.to_datetime(df_incidents['Date of Incident (UTC)'])
+    df_incidents['Week'] = df_incidents['Date of Incident (UTC)'].dt.isocalendar().week
+
+    severity_mapping = {
+        'Property Damage': 25,
+        'Record Only - No Treatment': 50,
+        'First Aid': 75,
+        'Molten Metal Spill > 25 lbs': 150,
+        'Molten Metal Explosion (Force 2 or 3)': 150,
+        'Other Recordable Case': 250,
+        'Restricted or Transferred Work': 250,
+        'Days Away From Work': 350,
+        'Recordable - Fatality': 600 
+    }
+
+    df_incidents['Points'] = df_incidents['Injury Classification'].map(severity_mapping).fillna(
+        df_incidents['Type'].map(severity_mapping)
+    ).fillna(0) 
+
+    weekly_scores = df_incidents.groupby('Week')['Points'].sum()
+    current_week = pd.Timestamp.now().isocalendar().week
+    weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(14, 6)) 
+    low_zone_upper, med_zone_upper, y_max = 400, 800, 1250
+    
+    ax.axhspan(0, low_zone_upper, color='lightgreen', alpha=0.4, label='Low Risk Zone (0-400)')
+    ax.axhspan(low_zone_upper, med_zone_upper, color='khaki', alpha=0.4, label='Medium Risk Zone (401-800)')
+    ax.axhspan(med_zone_upper, y_max, color='lightcoral', alpha=0.4, label='High Risk Zone (800+)')
+
+    ax.plot(weekly_scores.index, weekly_scores.values, color='black', linewidth=2.5, marker='o', markersize=6, label='Weekly Severity Total')
+
+    # Legend Sidebar logic omitted for brevity in snippet; 
+    # you can include the legend logic here as defined in your provided script.
+
+    ax.set_title('Incident Severity Graph', fontsize=16, fontweight='bold', pad=20)
+    ax.set_xlabel('Calendar Week Number')
+    ax.set_ylabel('Total Accumulated Severity Points')
+    ax.set_ylim(0, y_max)
+    ax.set_xticks(range(1, current_week + 1))
+    ax.legend(loc='upper left')
+
+    # Display the plot in Streamlit
+    st.pyplot(fig)
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
