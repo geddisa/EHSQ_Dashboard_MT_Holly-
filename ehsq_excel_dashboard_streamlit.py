@@ -209,6 +209,38 @@ with tab2:
     fig_fsi.update_yaxes(range=[0, 100], tickformat=".0f")
 
     c1.plotly_chart(fig_fsi, use_container_width=True)
+    # -----------------------------------------
+    # CAPA Trend
+    # -----------------------------------------
+    # Create a local copy to avoid modifying the original data
+    df_capa = data["CAPAs"].copy()
+    
+    # Identify the column name
+    capa_col = df_capa.columns[4]
+    
+    # Convert column to numeric to handle any unexpected text/formatting
+    df_capa[capa_col] = pd.to_numeric(df_capa[capa_col], errors='coerce')
+    
+    # Create a temporary column for the chart (0-100 scale)
+    df_capa['Plot_Value'] = df_capa[capa_col] * 100
+
+    fig_capa = px.line(
+        df_capa,
+        x=df_capa.columns[0],
+        y='Plot_Value',
+        markers=True,
+        text='Plot_Value',
+        title="CAPA % On Time"
+    )
+
+    fig_capa.update_traces(
+        texttemplate="%{text:.0f}%", 
+        textposition="top center"
+    )
+    
+    fig_capa.update_yaxes(range=[0, 100], tickformat=".0f")
+
+    c2.plotly_chart(fig_capa, use_container_width=True)
 
 # =====================================================
 # TAB 3 - HOUSEKEEPING
