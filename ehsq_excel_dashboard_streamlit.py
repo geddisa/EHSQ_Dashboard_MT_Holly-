@@ -31,18 +31,46 @@ with header_right:
 @st.cache_data
 def load_all_data():
     path_lpa = "Audit Schedule - Internal - LPA.xlsx"
+
     return {
-        "Risk_Mitigation": pd.read_excel("RiskNotifications_All_MTH_2026-07-14.xlsx", sheet_name="Sheet1"),
-        "Incidents": pd.read_excel("IncidentReports_All_MTH_2026-07-14.xlsx", sheet_name="Sheet1"),
-        "FSI": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="FSI Reports", skiprows=1),
-        "CAPAs": pd.read_excel("EHSQ Metrics.xlsx", sheet_name="CAPAs", skiprows=1),
-        "Lead_Obs": pd.read_excel(path_lpa, sheet_name="Safe Obs - Leadership", skiprows=2),
-        "GS_Obs": pd.read_excel(path_lpa, sheet_name="Safe Obs - GS and EHS", skiprows=2),
-        "HSEQ_Obs": pd.read_excel(path_lpa, sheet_name="Safe Obs GS EHS", skiprows=2)
+        "Risk_Mitigation": pd.read_excel(
+            "RiskNotifications_All_MTH_2026-07-14.xlsx",
+            sheet_name="Sheet1"
+        ),
+        "Incidents": pd.read_excel(
+            "IncidentReports_All_MTH_2026-07-14.xlsx",
+            sheet_name="Sheet1"
+        ),
+        "FSI": pd.read_excel(
+            "EHSQ Metrics.xlsx",
+            sheet_name="FSI Reports",
+            skiprows=1
+        ),
+        "CAPAs": pd.read_excel(
+            "EHSQ Metrics.xlsx",
+            sheet_name="CAPAs",
+            skiprows=1
+        ),
+        "Lead_Obs": pd.read_excel(
+            path_lpa,
+            sheet_name="Safe Obs - Leadership",
+            skiprows=2
+        ),
+        "GS_Obs": pd.read_excel(
+            path_lpa,
+            sheet_name="Safe Obs - GS and EHS",
+            skiprows=2
+        ),
+        "HSEQ_Obs": pd.read_excel(
+            path_lpa,
+            sheet_name="Safe Obs GS EHS",
+            skiprows=2
+        )
     }
 
 try:
     data = load_all_data()
+
 except Exception as e:
     st.error(f"Error loading files: {e}")
     st.stop()
@@ -51,13 +79,27 @@ except Exception as e:
 # PROCESS INCIDENT DATA
 # =====================================================
 df_raw = data["Incidents"].copy()
-df_raw["Date"] = pd.to_datetime(df_raw["Date of Incident (UTC)"], errors="coerce")
-df_2026 = df_raw[df_raw["Date"].dt.year == 2026].copy()
+
+df_raw["Date"] = pd.to_datetime(
+    df_raw["Date of Incident (UTC)"],
+    errors="coerce"
+)
+
+df_2026 = df_raw[
+    df_raw["Date"].dt.year == 2026
+].copy()
 
 # =====================================================
-# TABS SETUP
+# TABS SETUP & UNPACKING
 # =====================================================
-tabs = st.tabs(["Overview", "Compliance", "Housekeeping", "Safe Observations", "Risk Mitigation"])
+tabs = st.tabs([
+    "Overview",
+    "Compliance",
+    "Housekeeping",
+    "Safe Observations",
+    "Risk Mitigation"
+])
+
 tab1, tab2, tab3, tab4, tab5 = tabs
 
 # =====================================================
@@ -65,68 +107,273 @@ tab1, tab2, tab3, tab4, tab5 = tabs
 # =====================================================
 with tab1:
     st.subheader("Incident Breakdown")
+
     col1, col2 = st.columns(2)
 
     if not df_2026.empty:
+
+        # -----------------------------------------
         # Incidents by Type
-        type_counts = df_2026.groupby("Type").size().reset_index(name="Count")
-        fig_type = px.bar(type_counts, x="Type", y="Count", text="Count", title="Incidents by Type")
+        # -----------------------------------------
+        type_counts = (
+            df_2026.groupby("Type")
+            .size()
+            .reset_index(name="Count")
+        )
+
+        fig_type = px.bar(
+            type_counts,
+            x="Type",
+            y="Count",
+            text="Count",
+            title="Incidents by Type"
+        )
+
         fig_type.update_traces(textposition="outside")
-        col1.plotly_chart(fig_type, use_container_width=True)
 
+        col1.plotly_chart(
+            fig_type,
+            use_container_width=True
+        )
+
+        # -----------------------------------------
         # Incidents by Department
-        dept_counts = df_2026.groupby(["Department", "Type"]).size().reset_index(name="Count")
-        fig_dept = px.bar(dept_counts, x="Department", y="Count", color="Type", text="Count", 
-                          title="Incidents by Department", barmode="group")
-        fig_dept.update_traces(textposition="outside", texttemplate="%{text}")
-        col2.plotly_chart(fig_dept, use_container_width=True)
+        # -----------------------------------------
+        dept_counts = (
+            df_2026.groupby(["Department", "Type"])
+            .size()
+            .reset_index(name="Count")
+        )
 
-    # Incident Severity Trend
-    st.subheader("Incident Severity Trend")
-    df_incidents = data["Incidents"].copy()
-    df_incidents['Date of Incident (UTC)'] = pd.to_datetime(df_incidents['Date of Incident (UTC)'])
-    df_incidents['Week'] = df_incidents['Date of Incident (UTC)'].dt.isocalendar().week
-    
-    severity_mapping = {'Property Damage': 25, 'Record Only - No Treatment': 50, 'First Aid': 75, 
-                        'Molten Metal Spill > 25 lbs': 150, 'Molten Metal Explosion (Force 2 or 3)': 150, 
-                        'Other Recordable Case': 250, 'Restricted or Transferred Work': 250, 
-                        'Days Away From Work': 350, 'Recordable - Fatality': 600}
-    
-    df_incidents['Points'] = df_incidents['Injury Classification'].map(severity_mapping).fillna(df_incidents['Type'].map(severity_mapping)).fillna(0)
-    weekly_scores = df_incidents.groupby('Week')['Points'].sum()
-    current_week = pd.Timestamp.now().isocalendar().week
-    weekly_scores = weekly_scores.reindex(range(1, current_week + 1), fill_value=0)
+        fig_dept = px.bar(
+            dept_counts,
+            x="Department",
+            y="Count",
+            color="Type",
+            text="Count",
+            title="Incidents by Department",
+            barmode="group"
+        )
 
-    fig, ax = plt.subplots(figsize=(14, 6))
-    ax.axhspan(0, 400, color='lightgreen', alpha=0.4, label='Low Risk (0-400)')
-    ax.axhspan(400, 800, color='khaki', alpha=0.4, label='Medium Risk (401-800)')
-    ax.axhspan(800, 1250, color='lightcoral', alpha=0.4, label='High Risk (800+)')
-    ax.plot(weekly_scores.index, weekly_scores.values, color='black', marker='o', label='Severity Total')
-    ax.set_title('Incident Severity Graph')
-    ax.set_xlabel('Week')
-    ax.set_ylabel('Points')
-    ax.set_ylim(0, 1250)
-    ax.legend()
-    st.pyplot(fig)
+        fig_dept.update_traces(
+            textposition="outside",
+            texttemplate="%{text}"
+        )
+
+        col2.plotly_chart(
+            fig_dept,
+            use_container_width=True
+        )
 
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
 with tab2:
     st.subheader("Compliance & Reporting Trends")
+
     c1, c2 = st.columns(2)
 
-    for col_obj, data_key, title in [(c1, "FSI", "FSI % On Time"), (c2, "CAPAs", "CAPA % On Time")]:
-        df = data[data_key].copy()
-        col_name = df.columns[4]
-        df[col_name] = pd.to_numeric(df[col_name], errors='coerce') * 100
-        fig = px.line(df, x=df.columns[0], y=col_name, markers=True, text=col_name, title=title)
-        fig.update_traces(texttemplate="%{text:.0f}%", textposition="top center")
-        fig.update_yaxes(range=[0, 100], tickformat=".0f")
-        col_obj.plotly_chart(fig, use_container_width=True)
+    # -----------------------------------------
+    # FSI Trend
+    # -----------------------------------------
+    df_fsi = data["FSI"].copy()
+    fsi_col = df_fsi.columns[4]
+    df_fsi[fsi_col] = pd.to_numeric(df_fsi[fsi_col], errors='coerce')
+    df_fsi['Plot_Value'] = df_fsi[fsi_col] * 100
+
+    fig_fsi = px.line(
+        df_fsi,
+        x=df_fsi.columns[0],
+        y='Plot_Value',
+        markers=True,
+        text='Plot_Value',
+        title="FSI % On Time"
+    )
+
+    fig_fsi.update_traces(
+        texttemplate="%{text:.0f}%",
+        textposition="top center"
+    )
+    
+    fig_fsi.update_yaxes(range=[0, 100], tickformat=".0f")
+
+    c1.plotly_chart(fig_fsi, use_container_width=True)
+
+    # -----------------------------------------
+    # CAPA Trend
+    # -----------------------------------------
+    df_capa = data["CAPAs"].copy()
+    capa_col = df_capa.columns[4]
+    df_capa[capa_col] = pd.to_numeric(df_capa[capa_col], errors='coerce')
+    df_capa['Plot_Value'] = df_capa[capa_col] * 100
+
+    fig_capa = px.line(
+        df_capa,
+        x=df_capa.columns[0],
+        y='Plot_Value',
+        markers=True,
+        text='Plot_Value',
+        title="CAPA % On Time"
+    )
+
+    fig_capa.update_traces(
+        texttemplate="%{text:.0f}%",
+        textposition="top center"
+    )
+    
+    fig_capa.update_yaxes(range=[0, 100], tickformat=".0f")
+
+    c2.plotly_chart(fig_capa, use_container_width=True)
 
 # =====================================================
-# TABS 3, 4, 5 (REMAINING)
+# TAB 3 - HOUSEKEEPING
 # =====================================================
-# (Place your existing Housekeeping, Safe Obs, and Risk Mitigation code here, 
-# ensuring 4-space indentation under the 'with tabX:' statements)
+with tab3:
+    st.subheader("Housekeeping Status")
+
+    hk_data = (
+        df_2026.groupby(
+            ["Department", "Status"]
+        )
+        .size()
+        .reset_index(name="Count")
+    )
+
+    fig_hk = px.bar(
+        hk_data,
+        x="Department",
+        y="Count",
+        color="Status",
+        text="Count",
+        barmode="group",
+        title="Housekeeping Status"
+    )
+
+    fig_hk.update_traces(
+        textposition="outside"
+    )
+
+    st.plotly_chart(
+        fig_hk,
+        use_container_width=True
+    )
+
+# =====================================================
+# TAB 4 - SAFE OBSERVATIONS
+# =====================================================
+with tab4:
+    st.subheader("Safe Observations Tracking")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric("Leadership Obs", 91)
+    c2.metric("GS Obs", 177)
+    c3.metric("HSEQ Obs", 146)
+
+    def prepare_trend_data(df, category):
+        week_cols = [
+            c for c in df.columns
+            if "Week" in str(c)
+        ]
+        if not week_cols:
+            return pd.DataFrame(
+                columns=["Week", "Count", "Category"]
+            )
+        trend = (
+            df[week_cols]
+            .apply(
+                pd.to_numeric,
+                errors="coerce"
+            )
+            .sum()
+            .reset_index()
+        )
+        trend.columns = [
+            "Week",
+            "Count"
+        ]
+        trend["Count"] = (
+            trend["Count"]
+            .fillna(0)
+        )
+        trend["Category"] = category
+        return trend
+
+    leadership_trend = prepare_trend_data(data["Lead_Obs"], "Leadership")
+    gs_trend = prepare_trend_data(data["GS_Obs"], "GS")
+    hseq_trend = prepare_trend_data(data["HSEQ_Obs"], "HSEQ")
+
+    df_trends = pd.concat(
+        [
+            leadership_trend,
+            gs_trend,
+            hseq_trend
+        ],
+        ignore_index=True
+    )
+
+    fig_obs = px.line(
+        df_trends,
+        x="Week",
+        y="Count",
+        color="Category",
+        markers=True,
+        text="Count",
+        title="Weekly Observation Trends"
+    )
+
+    fig_obs.update_traces(
+        mode="lines+markers+text",
+        textposition="top center",
+        connectgaps=True
+    )
+
+    fig_obs.update_layout(
+        hovermode="x unified",
+        legend_title="Observation Type"
+    )
+
+    st.plotly_chart(
+        fig_obs,
+        use_container_width=True
+    )
+
+# =====================================================
+# TAB 5 - RISK MITIGATION
+# =====================================================
+with tab5:
+    st.subheader("Risk Mitigation")
+    risk_df = data["Risk_Mitigation"]
+    status_counts = risk_df['Status'].value_counts()
+
+    def display_metric(label, value, color):
+        st.markdown(
+            f"""
+            <div style="background-color: {color}; padding: 10px; border-radius: 5px; text-align: center; color: white; font-weight: bold;">
+                {label}<br><span style="font-size: 24px;">{value}</span>
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+    cols = st.columns(6)
+    with cols[0]: display_metric("Completed On Time", status_counts.get("Completed On Time", 0), "#28a745")
+    with cols[1]: display_metric("In Draft", status_counts.get("In Draft", 0), "#fd7e14")
+    with cols[2]: display_metric("Rejected", status_counts.get("Rejected", 0), "#dc3545")
+    with cols[3]: display_metric("In Review", status_counts.get("In Review", 0), "#17a2b8")
+    with cols[4]: display_metric("Completed Late", status_counts.get("Completed Late", 0), "#f8d7da")
+    with cols[5]: display_metric("Draft Overdue", status_counts.get("Draft Overdue", 0), "#6c757d")
+
+    st.markdown("---")
+
+    edited_risk_df = st.data_editor(
+        risk_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status",
+                options=["Completed On Time", "In Draft", "Rejected", "In Review", "Completed Late", "Draft Overdue"],
+                required=True
+            )
+        }
+    )
