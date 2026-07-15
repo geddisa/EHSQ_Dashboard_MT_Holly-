@@ -356,21 +356,31 @@ with tab4:
 # =====================================================
 # TAB 5 - RISK MITIGATION
 # =====================================================
-# 1. Load the data
+# =====================================================
+# TAB 5 - RISK MITIGATION
+# =====================================================
+with tab5:
+    st.subheader("Risk Mitigation") # Adding a subheader to confirm we are in the right place
+    
+    # 1. Load the data
     risk_df = data["Risk_Mitigation"]
     
-    # 2. Display the data in an editor
-    # This shows whatever is currently in your Excel file
-    edited_risk_df = st.data_editor(
-        risk_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Status": st.column_config.SelectboxColumn(
-                "Status",
-                # Update these options to match the output from the script in Step 1
-                options=["Completed", "In Progress", "Resolved in Place", "Need More Information"],
-                required=True
-            )
-        }
-    )
+    # DEBUG: Check if data is loaded
+    st.write(f"Dataframe shape: {risk_df.shape}")
+    
+    if risk_df.empty:
+        st.warning("The Risk Mitigation file is empty or could not be read.")
+    else:
+        # 2. Display the data in an editor
+        edited_risk_df = st.data_editor(
+            risk_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status",
+                    options=["Completed", "In Progress", "Resolved in Place", "Need More Information"],
+                    required=True
+                )
+            }
+        )
