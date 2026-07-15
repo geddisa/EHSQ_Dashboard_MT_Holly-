@@ -205,7 +205,25 @@ with tab1:
 
     # Display in Streamlit
     st.pyplot(fig)
-
+    # -----------------------------------------
+    # Severity Point System Legend
+    # -----------------------------------------
+    st.markdown("### Severity Point Legend")
+    
+    # Create a clean layout for the points
+    col_l1, col_l2 = st.columns(2)
+    
+    with col_l1:
+        st.write("**Property Damage:** 25 pts")
+        st.write("**Record Only - No Treatment:** 50 pts")
+        st.write("**First Aid:** 75 pts")
+        st.write("**Molten Metal Spill > 25 lbs:** 150 pts")
+        
+    with col_l2:
+        st.write("**Molten Metal Explosion (Force 2 or 3):** 150 pts")
+        st.write("**Other Recordable Case / Restricted or Transferred Work:** 250 pts")
+        st.write("**Days Away From Work:** 350 pts")
+        st.write("**Recordable - Fatality:** 600 pts")
 # =====================================================
 # TAB 2 - COMPLIANCE
 # =====================================================
