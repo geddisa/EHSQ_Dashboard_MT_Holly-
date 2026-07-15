@@ -357,19 +357,15 @@ with tab4:
 # TAB 5 - RISK MITIGATION
 # =====================================================
 with tab5:
-    st.subheader("Riskk Mitigation Progress")
+    st.subheader("Risk Mitigation Progress")
 
-    status_config = {
-        "Completed": "green",
-        "In Progress": "orange",
-        "Resolved in Place": "blue",
-        "Need More Information": "red"
-    }
+    # 1. Define your initial dataframe first
+    # Use display_df (the one you defined before the editor) to get the initial counts
+    # so the app doesn't crash on the first run.
+    status_counts = display_df["Status"].value_counts()
 
-    status_counts = edited_df["Status"].value_counts()
-
+    # 2. Display the metrics using the counts from the source dataframe
     col1, col2, col3, col4 = st.columns(4)
-
     with col1:
         st.metric("Completed", status_counts.get("Completed", 0))
     with col2:
@@ -378,14 +374,17 @@ with tab5:
         st.metric("Resolved in Place", status_counts.get("Resolved in Place", 0))
     with col4:
         st.metric("Need More Information", status_counts.get("Need More Information", 0))
-    st.markdown("---") 
 
+    st.markdown("---")
+
+    # 3. Create the data editor
+    # Assign the result back to 'edited_df' here
     edited_df = st.data_editor(
         display_df,
         hide_index=True,
         use_container_width=True,
         column_config={
-            "Status": st.column_config.SelectionboxColumn(
+            "Status": st.column_config.SelectboxColumn(
                 "Status",
                 options=[
                     "Completed",
