@@ -180,44 +180,35 @@ with tab2:
     # -----------------------------------------
     # FSI Trend
     # -----------------------------------------
+    # Create a local copy to avoid modifying the original data
+    df_fsi = data["FSI"].copy()
+    
+    # Identify the column name
+    fsi_col = df_fsi.columns[4]
+    
+    # Convert column to numeric to handle any unexpected text/formatting
+    df_fsi[fsi_col] = pd.to_numeric(df_fsi[fsi_col], errors='coerce')
+    
+    # Create a temporary column for the chart (0-100 scale)
+    df_fsi['Plot_Value'] = df_fsi[fsi_col] * 100
+
     fig_fsi = px.line(
-        data["FSI"],
-        x=data["FSI"].columns[0],
-        y=data["FSI"].columns[4] * 100, # Multiply by 100 to convert to 0-100 scale
+        df_fsi,
+        x=df_fsi.columns[0],
+        y='Plot_Value',
         markers=True,
-        text=data["FSI"].columns[4] * 100,
+        text='Plot_Value',
         title="FSI % On Time"
     )
 
     fig_fsi.update_traces(
-        texttemplate="%{text:.0f}%", # Appends % and forces whole number
+        texttemplate="%{text:.0f}%", 
         textposition="top center"
     )
     
     fig_fsi.update_yaxes(range=[0, 100], tickformat=".0f")
 
     c1.plotly_chart(fig_fsi, use_container_width=True)
-
-    # -----------------------------------------
-    # CAPA Trend
-    # -----------------------------------------
-    fig_capa = px.line(
-        data["CAPAs"],
-        x=data["CAPAs"].columns[0],
-        y=data["CAPAs"].columns[4] * 100, # Multiply by 100 to convert to 0-100 scale
-        markers=True,
-        text=data["CAPAs"].columns[4] * 100,
-        title="CAPA % On Time"
-    )
-
-    fig_capa.update_traces(
-        texttemplate="%{text:.0f}%", # Appends % and forces whole number
-        textposition="top center"
-    )
-    
-    fig_capa.update_yaxes(range=[0, 100], tickformat=".0f")
-
-    c2.plotly_chart(fig_capa, use_container_width=True)
 
 # =====================================================
 # TAB 3 - HOUSEKEEPING
