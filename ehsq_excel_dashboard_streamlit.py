@@ -356,37 +356,24 @@ with tab4:
 # =====================================================
 # TAB 5 - RISK MITIGATION
 # =====================================================
-with tab5:
-    st.subheader("Risk Mitigation Status")
-    
-    # Load the data from your cache
+# 1. Load the data
     risk_df = data["Risk_Mitigation"]
     
-    # Display the dataframe directly
-    # This automatically shows the 'Status' column from your Excel file
-    st.data_editor(
+    # 2. Display the data in an editor
+    # This shows whatever is currently in your Excel file
+    edited_risk_df = st.data_editor(
         risk_df,
         use_container_width=True,
         hide_index=True,
-        # Making the status column a selectbox makes it easy to update
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
+                # Update these options to match the output from the script in Step 1
                 options=["Completed", "In Progress", "Resolved in Place", "Need More Information"],
                 required=True
             )
         }
     )
-
-    # 4. Save Logic
-    if st.button("Save Mitigation Updates"):
-        # Update your Excel file here using the same approach as your other tabs
-        try:
-            # Code to write edited_risk_df back to the 'Risk Mitigation' sheet
-            st.success("Risk mitigation updates saved!")
-            st.cache_data.clear()
-        except Exception as e:
-            st.error(f"Error saving: {e}")
     # -----------------------------------------
     # Save Updates back to the Main Source File
     # -----------------------------------------
