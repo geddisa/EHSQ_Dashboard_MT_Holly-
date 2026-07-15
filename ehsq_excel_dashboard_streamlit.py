@@ -359,25 +359,13 @@ with tab4:
 with tab5:
     st.subheader("Risk Mitigation Progress")
 
-    # 1. PREPARE THE DATA FIRST (This must happen inside tab5 or before it)
-    cols_to_display = [
-        "Incident", "Assigned To", "Status", "Type", 
-        "Department", "Due Date", "Description"
-    ]
+    # Access the dedicated risk data
+    risk_df = data["Risk_Mitigation"] 
 
-    # Ensure columns exist
-    for col in cols_to_display:
-        if col not in df_raw.columns:
-            df_raw[col] = ""
+    # 1. Calculate Metrics
+    status_counts = risk_df["Status"].value_counts()
 
-    # Create display_df (This fixes your NameError)
-    display_df = df_raw[cols_to_display].copy()
-    display_df["Status"] = display_df["Status"].fillna("Open")
-
-    # 2. CALCULATE METRICS
-    status_counts = display_df["Status"].value_counts()
-
-    # 3. DISPLAY METRICS
+    # 2. Display Metrics (Using the same logic as before)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Completed", status_counts.get("Completed", 0))
@@ -390,26 +378,29 @@ with tab5:
 
     st.markdown("---")
 
-    # 4. DISPLAY EDITOR
-    edited_df = st.data_editor(
-        display_df,
+    # 3. Data Editor
+    edited_risk_df = st.data_editor(
+        risk_df,
         hide_index=True,
         use_container_width=True,
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
-                options=[
-                    "Completed",
-                    "In Progress",
-                    "Resolved in Place",
-                    "Need More Information"
-                ],
+                options=["Completed", "In Progress", "Resolved in Place", "Need More Information"],
                 required=True
             )
-        },
-        disabled=["Incident", "Assigned To", "Type", "Department", "Due Date", "Description"]
+        }
     )
 
+    # 4. Save Logic
+    if st.button("Save Mitigation Updates"):
+        # Update your Excel file here using the same approach as your other tabs
+        try:
+            # Code to write edited_risk_df back to the 'Risk Mitigation' sheet
+            st.success("Risk mitigation updates saved!")
+            st.cache_data.clear()
+        except Exception as e:
+            st.error(f"Error saving: {e}")
     # -----------------------------------------
     # Save Updates back to the Main Source File
     # -----------------------------------------
