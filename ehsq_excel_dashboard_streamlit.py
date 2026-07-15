@@ -357,32 +357,18 @@ with tab4:
 # TAB 5 - RISK MITIGATION
 # =====================================================
 with tab5:
-    st.subheader("Risk Mitigation Progress")
-
-    # Access the dedicated risk data
-    risk_df = data["Risk_Mitigation"] 
-
-    # 1. Calculate Metrics
-    status_counts = risk_df["Status"].value_counts()
-
-    # 2. Display Metrics (Using the same logic as before)
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Completed", status_counts.get("Completed", 0))
-    with col2:
-        st.metric("In Progress", status_counts.get("In Progress", 0))
-    with col3:
-        st.metric("Resolved in Place", status_counts.get("Resolved in Place", 0))
-    with col4:
-        st.metric("Need More Information", status_counts.get("Need More Information", 0))
-
-    st.markdown("---")
-
-    # 3. Data Editor
-    edited_risk_df = st.data_editor(
+    st.subheader("Risk Mitigation Status")
+    
+    # Load the data from your cache
+    risk_df = data["Risk_Mitigation"]
+    
+    # Display the dataframe directly
+    # This automatically shows the 'Status' column from your Excel file
+    st.data_editor(
         risk_df,
-        hide_index=True,
         use_container_width=True,
+        hide_index=True,
+        # Making the status column a selectbox makes it easy to update
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
