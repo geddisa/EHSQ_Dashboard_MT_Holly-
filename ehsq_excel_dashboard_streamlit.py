@@ -152,22 +152,15 @@ fig_dept = px.bar(
     x="Department",
     y="Count",
     color="Type",
-    text="Count", 
-    title="Incidents by Department"
+    text="Count",
+    title="Incidents by Department",
+    barmode="group" # This puts the bars side-by-side
 )
 
-# Update traces to force text rendering
+# Force the labels to appear on top of each individual bar
 fig_dept.update_traces(
-    textposition="inside", 
-    texttemplate="%{text}",
-    insidetextanchor="middle",
-    textfont=dict(size=10) # Shrinking font slightly can help it fit in tight bars
-)
-
-# Optional: Adjust the layout to give bars more room
-fig_dept.update_layout(
-    uniformtext_mode='hide', 
-    uniformtext_minsize=8
+    textposition="outside", 
+    texttemplate="%{text}"
 )
 
 col2.plotly_chart(
