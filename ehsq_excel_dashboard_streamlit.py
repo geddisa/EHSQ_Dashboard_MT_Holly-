@@ -139,35 +139,33 @@ with tab1:
         )
 
         # -----------------------------------------
-        # Incidents by Department
-        # -----------------------------------------
-        dept_counts = (
-            df_2026.groupby(
-                ["Department", "Type"]
-            )
-            .size()
-            .reset_index(name="Count")
-        )
+# Incidents by Department
+# -----------------------------------------
+dept_counts = (
+    df_2026.groupby(["Department", "Type"])
+    .size()
+    .reset_index(name="Count")
+)
 
-        fig_dept = px.bar(
-            dept_counts,
-            x="Department",
-            y="Count",
-            color="Type",
-            text="Count",
-            title="Incidents by Department"
-        )
+fig_dept = px.bar(
+    dept_counts,
+    x="Department",
+    y="Count",
+    color="Type",
+    text="Count", # Ensure this is mapped
+    title="Incidents by Department"
+)
 
-        # Fixed text layout strategy
-        fig_dept.update_traces(
-            textposition="inside",
-            texttemplate="%{text}"
-        )
+# Fix the text display
+fig_dept.update_traces(
+    textposition="auto", # Allows Plotly to choose best position
+    texttemplate="%{text}" # Explicitly shows the count
+)
 
-        col2.plotly_chart(
-            fig_dept,
-            use_container_width=True
-        )
+col2.plotly_chart(
+    fig_dept,
+    use_container_width=True
+)
 
 # =====================================================
 # TAB 2 - COMPLIANCE
