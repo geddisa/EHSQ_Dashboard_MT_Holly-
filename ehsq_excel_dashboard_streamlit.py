@@ -35,6 +35,10 @@ def load_all_data():
     path_lpa = "Audit Schedule - Internal - LPA.xlsx"
 
     return {
+        "Risk_Mitigation": pd.read_excel(
+            "RiskNotifications_All_MTH_2026-07-14.xlsx",
+            sheet_name="Sheet1"
+        ),
         "Incidents": pd.read_excel(
             "IncidentReports_All_MTH_2026-07-14.xlsx",
             sheet_name="Sheet1"
@@ -353,55 +357,47 @@ with tab4:
 # TAB 5 - RISK MITIGATION
 # =====================================================
 with tab5:
-    st.subheader("Risk Mitigation Progress")
+    st.subheader("Riskk Mitigation Progress")
 
-    cols_to_display = [
-        "Incident",
-        "Assigned To",
-        "Status",
-        "Type",
-        "Department",
-        "Due Date",
-        "Description"
-    ]
+    status_config = {
+        "Completed": "green",
+        "In Progress": "orange",
+        "Resolved in Place": "blue",
+        "Need More Information": "red"
+    }
 
-    for col in cols_to_display:
-        if col not in df_raw.columns:
-            df_raw[col] = ""
+    status_counts = edited_df["Status"].value_counts()
 
-    display_df = df_raw[cols_to_display].copy()
-    display_df["Status"] = display_df["Status"].fillna("Open")
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Completed", status_counts.get("Completed", 0))
+    with col2:
+        st.metric("In Progress", status_counts.get("In Progress", 0))
+    with col3:
+        st.metric("Resolved in Place", status_counts.get("Resolved in Place", 0))
+    with col4:
+        st.metric("Need More Information", status_counts.get("Need More Information", 0))
+    st.markdown("---") 
 
     edited_df = st.data_editor(
         display_df,
         hide_index=True,
         use_container_width=True,
         column_config={
-            "Status": st.column_config.SelectboxColumn(
+            "Status": st.column_config.SelectionboxColumn(
                 "Status",
-                help="Update mitigation status",
-                width="medium",
                 options=[
-                    "Open",
-                    "In Progress",
-                    "Pending",
-                    "On Hold",
                     "Completed",
-                    "Closed"
+                    "In Progress",
+                    "Resolved in Place",
+                    "Need More Information"
                 ],
                 required=True
             )
         },
-        disabled=[
-            "Incident",
-            "Assigned To",
-            "Type",
-            "Department",
-            "Due Date",
-            "Description"
-        ]
+        disabled=["Incident", "Assigned To", "Type", "Department", "Due Date", "Description"]
     )
-
     # -----------------------------------------
     # Save Updates back to the Main Source File
     # -----------------------------------------
