@@ -189,14 +189,12 @@ with tab2:
         title="FSI % On Time"
     )
 
-    fig_fsi.update_traces(
-        textposition="top center"
-    )
+    fig_fsi.update_traces(textposition="top center")
+    
+    # Force y-axis to range 0-100 and ensure tick format is integer
+    fig_fsi.update_yaxes(range=[0, 100], tickformat=".0f")
 
-    c1.plotly_chart(
-        fig_fsi,
-        use_container_width=True
-    )
+    c1.plotly_chart(fig_fsi, use_container_width=True)
 
     # -----------------------------------------
     # CAPA Trend
@@ -210,14 +208,12 @@ with tab2:
         title="CAPA % On Time"
     )
 
-    fig_capa.update_traces(
-        textposition="top center"
-    )
+    fig_capa.update_traces(textposition="top center")
+    
+    # Force y-axis to range 0-100 and ensure tick format is integer
+    fig_capa.update_yaxes(range=[0, 100], tickformat=".0f")
 
-    c2.plotly_chart(
-        fig_capa,
-        use_container_width=True
-    )
+    c2.plotly_chart(fig_capa, use_container_width=True)
 
 # =====================================================
 # TAB 3 - HOUSEKEEPING
