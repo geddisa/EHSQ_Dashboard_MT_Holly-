@@ -419,7 +419,7 @@ with tab5:
     with cols[1]: display_metric("In Draft", status_counts.get("In Draft", 0), "#F6BE00")
     with cols[2]: display_metric("Rejected", status_counts.get("Rejected", 0), "#dc3545")
     with cols[3]: display_metric("In Review", status_counts.get("In Review", 0), "#90EE90")
-    with cols[4]: display_metric("Completed Late", status_counts.get("Completed Late", 0), "#f8d7da")
+    with cols[4]: display_metric("Completed Late", status_counts.get("Completed Late", 0), "#FF4500")
     with cols[5]: display_metric("Draft Overdue", status_counts.get("Draft Overdue", 0), "#6c757d")
 
     st.markdown("---")
