@@ -243,9 +243,9 @@ with tab2:
     fig_fsi = px.line(
         df_fsi,
         x=df_fsi.columns[0],
-        y='Percentage',
+        y="Percentage",
         markers=True,
-        text='Percentage',
+        text="Percentage",
         title="FSI % On Time"
     )
 
@@ -269,9 +269,9 @@ with tab2:
     fig_capa = px.line(
         df_capa,
         x=df_capa.columns[0],
-        y='Percentage',
+        y="Percentage",
         markers=True,
-        text='Percentage',
+        text="Percentage",
         title="CAPA % On Time"
     )
 
