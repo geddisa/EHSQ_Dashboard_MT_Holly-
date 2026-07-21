@@ -415,7 +415,7 @@ with tab5:
         )
 
     cols = st.columns(6)
-    with cols[0]: display_metric("Completed On Time", status_counts.get("Completed On Time", 0),"#90EE90")
+    with cols[0]: display_metric("Completed On Time", status_counts.get("Completed On Time", 0),"#7aeb7a")
     with cols[1]: display_metric("In Draft", status_counts.get("In Draft", 0),"#28a745")
     with cols[2]: display_metric("In Review", status_counts.get("In Review", 0), "#F6BE00" )
     with cols[3]: display_metric("Completed Late", status_counts.get("Completed Late", 0), "#FF4500")
