@@ -288,75 +288,62 @@ with tab2:
 # TAB 3 - HOUSEKEEPING
 # =====================================================
 with tab3:
+
     st.subheader("Housekeeping Status")
 
-    # Optional: Add a quick filter row above the chart
-    selected_depts = st.multiselect(
-        "Filter Departments",
-        options=df_2026["Department"].unique(),
-        default=df_2026["Department"].unique(),
-        key="hk_dept_filter"
+
+
+    hk_data = (
+
+        df_2026.groupby(
+
+            ["Department", "Status"]
+
+        )
+
+        .size()
+
+        .reset_index(name="Count")
+
     )
 
-    # Filter dataframe based on selection
-    filtered_df = df_2026[df_2026["Department"].isin(selected_depts)]
 
-    if not filtered_df.empty:
-        # High-level metrics row
-        total_records = len(filtered_df)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total Records", total_records)
-        with col2:
-            # Example metric: count of a specific status if applicable, e.g., 'Closed' or 'Completed'
-            completed_count = len(filtered_df[filtered_df["Status"].str.lower() == "completed"]) if "Status" in filtered_df.columns else 0
-            st.metric("Completed", completed_count)
 
-        st.markdown("---")
+    fig_hk = px.bar(
 
-        # Group data
-        hk_data = (
-            filtered_df.groupby(["Department", "Status"])
-            .size()
-            .reset_index(name="Count")
-        )
+        hk_data,
 
-        # Create Plotly bar chart
-        fig_hk = px.bar(
-            hk_data,
-            x="Department",
-            y="Count",
-            color="Status",
-            text="Count",
-            barmode="group",
-            title="Housekeeping Status by Department"
-        )
+        x="Department",
 
-        # Polish chart styling
-        fig_hk.update_traces(
-            textposition="outside",
-            marker=dict(line=dict(width=1, color="rgb(255, 255, 255)")) # Adds subtle borders to bars
-        )
+        y="Count",
 
-        fig_hk.update_layout(
-            xaxis_title="Department",
-            yaxis_title="Count",
-            legend_title="Status",
-            template="plotly_white", # Clean, modern theme
-            margin=dict(t=50, b=50, l=50, r=50),
-            hovermode="x unified"
-        )
+        color="Status",
 
-        st.plotly_chart(
-            fig_hk,
-            use_container_width=True
-        )
+        text="Count",
 
-        # Optional: Data preview expander
-        with st.expander("View Underlying Data"):
-            st.dataframe(hk_data, use_container_width=True)
-    else:
-        st.info("Please select at least one department to display data.")
+        barmode="group",
+
+        title="Housekeeping Status"
+
+    )
+
+
+
+    fig_hk.update_traces(
+
+        textposition="outside"
+
+    )
+
+
+
+    st.plotly_chart(
+
+        fig_hk,
+
+        use_container_width=True
+
+    )
 
 # =====================================================
 # TAB 4 - SAFE OBSERVATIONS
