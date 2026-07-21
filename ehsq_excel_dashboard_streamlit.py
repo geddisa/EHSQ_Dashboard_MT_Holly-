@@ -393,19 +393,7 @@ with tab4:
     df_trends = pd.concat(
         [leadership_trend, gs_trend, hseq_trend],
         ignore_index=True
-    )
-
-    # 4. Render Chart if Data Exists
-    if not df_trends.empty:
-        fig_obs = px.line(
-            df_trends,
-            x="Week",
-            y="Count",
-            color="Category",
-            markers=True,
-            text="Count",
-            title="Weekly Observation Trends",
-            template="plotly_white" # Clean theme option
+  
         )
 
         fig_obs.update_traces(
