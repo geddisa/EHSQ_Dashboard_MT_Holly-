@@ -245,7 +245,7 @@ with tab2:
         x=df_fsi.columns[0],
         y='%',
         markers=True,
-        text='Plot_Value',
+        text='%',
         title="FSI % On Time"
     )
 
@@ -271,7 +271,7 @@ with tab2:
         x=df_capa.columns[0],
         y='%',
         markers=True,
-        text='Plot_Value',
+        text='%',
         title="CAPA % On Time"
     )
 
