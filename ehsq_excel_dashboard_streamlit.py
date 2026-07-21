@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # =====================================================
 st.set_page_config(
     layout="wide",
-    page_title="EHSQ Dashboard"
+    page_title="EHSQ KPI Dashboard"
 )
 
 # -----------------------------------------------------
@@ -19,7 +19,7 @@ header_left, header_right = st.columns([1, 4])
 with header_left:
     st.image("century_logo.png", use_container_width=True)
     st.markdown(
-        "<h1 style='margin-top: 10px;'>EHSQ KPI Dashboard</h1>",
+        "<h1 style='margin-top: 10px;'>EHSQ Dashboard</h1>",
         unsafe_allow_html=True
     )
 
