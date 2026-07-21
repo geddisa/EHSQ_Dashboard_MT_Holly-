@@ -243,7 +243,7 @@ with tab2:
     fig_fsi = px.line(
         df_fsi,
         x=df_fsi.columns[0],
-        y='Plot_Value',
+        y='%',
         markers=True,
         text='Plot_Value',
         title="FSI % On Time"
@@ -269,7 +269,7 @@ with tab2:
     fig_capa = px.line(
         df_capa,
         x=df_capa.columns[0],
-        y='Plot_Value',
+        y='%',
         markers=True,
         text='Plot_Value',
         title="CAPA % On Time"
