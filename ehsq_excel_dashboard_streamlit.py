@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # =====================================================
 st.set_page_config(
     layout="wide",
-    page_title="EHSQ KPI Dashboard"
+    page_title="EHSQ Dashboard"
 )
 
 # -----------------------------------------------------
