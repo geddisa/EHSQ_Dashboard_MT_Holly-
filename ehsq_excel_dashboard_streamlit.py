@@ -348,52 +348,22 @@ with tab3:
 # =====================================================
 # TAB 4 - SAFE OBSERVATIONS
 # =====================================================
-with tab4:
-    st.subheader("Safe Observations Tracking")
-
-    # 1. Display Metrics with Context (Optional delta placeholders)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Leadership Obs", 91, delta="+4 vs last week")
-    c2.metric("GS Obs", 177, delta="-2 vs last week")
-    c3.metric("HSEQ Obs", 146, delta="+12 vs last week")
-
-    st.markdown("---")
-
-    # 2. Optimized and Robust Trend Preparation Function
-    def prepare_trend_data(df, category):
-        if df is None or df.empty:
-            return pd.DataFrame(columns=["Week", "Count", "Category"])
-        
-        # Filter columns that contain "Week"
-        week_cols = [c for c in df.columns if "Week" in str(c)]
-        if not week_cols:
-            return pd.DataFrame(columns=["Week", "Count", "Category"])
-        
-        # Vectorized sum across week columns for better performance
-        trend_sums = df[week_cols].apply(pd.to_numeric, errors="coerce").sum(numeric_only=True)
-        
-        trend = pd.DataFrame({
-            "Week": trend_sums.index,
-            "Count": trend_sums.values
-        })
-        
-        trend["Count"] = trend["Count"].fillna(0)
-        trend["Category"] = category
-        return trend
-
-    # 3. Safely pull data with fallback checks
-    lead_df = data.get("Lead_Obs", pd.DataFrame())
-    gs_df = data.get("GS_Obs", pd.DataFrame())
-    hseq_df = data.get("HSEQ_Obs", pd.DataFrame())
-
-    leadership_trend = prepare_trend_data(lead_df, "Leadership")
-    gs_trend = prepare_trend_data(gs_df, "GS")
-    hseq_trend = prepare_trend_data(hseq_df, "HSEQ")
-
-    df_trends = pd.concat(
+df_trends = pd.concat(
         [leadership_trend, gs_trend, hseq_trend],
         ignore_index=True
-  
+    )
+
+    # 4. Render Chart if Data Exists
+    if not df_trends.empty:
+        fig_obs = px.line(
+            df_trends,
+            x="Week",
+            y="Count",
+            color="Category",
+            markers=True,
+            text="Count",
+            title="Weekly Observation Trends",
+            template="plotly_white"
         )
 
         fig_obs.update_traces(
