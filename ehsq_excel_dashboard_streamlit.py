@@ -98,7 +98,7 @@ tabs = st.tabs([
     "Risk Mitigation"
 ])
 
-tab1, tab2, tab3, tab4 = tabs
+tab1, tab2, tab3, tab4, tab5 = tabs
 
 # =====================================================
 # TAB 1 - OVERVIEW
