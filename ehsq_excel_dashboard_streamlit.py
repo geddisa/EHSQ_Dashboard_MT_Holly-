@@ -98,7 +98,7 @@ tabs = st.tabs([
     "Risk Mitigation"
 ])
 
-tab1, tab2, tab3, tab4, tab5 = tabs
+tab1, tab2, tab3, tab4 = tabs
 
 # =====================================================
 # TAB 1 - OVERVIEW
@@ -285,68 +285,11 @@ with tab2:
 # =====================================================
 # TAB 3 - HOUSEKEEPING
 # =====================================================
+
+# =====================================================
+# TAB 3 - SAFE OBSERVATIONS
+# =====================================================
 with tab3:
-
-    st.subheader("Housekeeping Status")
-
-
-
-    hk_data = (
-
-        df_2026.groupby(
-
-            ["Department", "Status"]
-
-        )
-
-        .size()
-
-        .reset_index(name="Count")
-
-    )
-
-
-
-    fig_hk = px.bar(
-
-        hk_data,
-
-        x="Department",
-
-        y="Count",
-
-        color="Status",
-
-        text="Count",
-
-        barmode="group",
-
-        title="Housekeeping Status"
-
-    )
-
-
-
-    fig_hk.update_traces(
-
-        textposition="outside"
-
-    )
-
-
-
-    st.plotly_chart(
-
-        fig_hk,
-
-        use_container_width=True
-
-    )
-
-# =====================================================
-# TAB 4 - SAFE OBSERVATIONS
-# =====================================================
-with tab4:
     st.subheader("Safe Observations Tracking")
 
     # Display Metrics with Context
@@ -357,9 +300,9 @@ with tab4:
 
     st.markdown("---")
 # =====================================================
-# TAB 5 - RISK MITIGATION
+# TAB 4 - RISK MITIGATION
 # =====================================================
-with tab5:
+with tab4:
     st.subheader("Risk Mitigation")
     risk_df = data["Risk_Mitigation"]
     status_counts = risk_df['Status'].value_counts()
