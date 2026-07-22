@@ -93,12 +93,11 @@ df_2026 = df_raw[
 tabs = st.tabs([
     "Overview",
     "Compliance",
-    "Housekeeping",
     "Safe Observations",
     "Risk Mitigation"
 ])
 
-tab1, tab2, tab3, tab4, tab5 = tabs
+tab1, tab2, tab3, tab4 = tabs
 
 # =====================================================
 # TAB 1 - OVERVIEW
