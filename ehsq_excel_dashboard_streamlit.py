@@ -19,7 +19,7 @@ header_left, header_right = st.columns([1, 4])
 with header_left:
     st.image("century_logo.png", use_container_width=True)
     st.markdown(
-        "<h1 style='margin-top: 10px;'>EHSQ Dashboard</h1>",
+        "<h1 style='margin-top: 6px;'>Environmental, Health, Safety, Quality KPI Dashboard</h1>",
         unsafe_allow_html=True
     )
 
