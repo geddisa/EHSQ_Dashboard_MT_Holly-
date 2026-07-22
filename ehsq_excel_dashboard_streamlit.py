@@ -14,9 +14,9 @@ st.set_page_config(
 # -----------------------------------------------------
 # HEADER SECTION WITH LOGO
 # -----------------------------------------------------
-header_left, header_right = st.columns([1, 4])
+header = st.columns([1, 4])
 
-with header_left:
+with header:
     st.image("century_logo.png", use_container_width=True)
     st.markdown(
         "<h1 style='margin-top: 10px;'>KPI Dashboard</h1>",
