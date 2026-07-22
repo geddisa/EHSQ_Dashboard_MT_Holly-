@@ -14,7 +14,7 @@ st.set_page_config(
 # -----------------------------------------------------
 # HEADER SECTION WITH LOGO
 # -----------------------------------------------------
-header_left = st.columns([1, 4])
+header_left, header_right = st.columns([1, 4])
 
 with header_left:
     st.image("century_logo.png", use_container_width=True)
