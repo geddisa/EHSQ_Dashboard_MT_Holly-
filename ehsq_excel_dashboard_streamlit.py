@@ -337,20 +337,21 @@ with tab4:
         st.markdown(
             f"""
             <div style="background-color: {color}; padding: 10px; border-radius: 5px; text-align: center; color: white; font-weight: bold;">
-                 {label}<br><span style="font-size: 24px;">{value}</span>
+                {label}<br><span style="font-size: 24px;">{value}</span>
             </div>
-            """, unsafe_allow_html=true
+            """, unsafe_allow_html=True
         )
 
+    # 4 metric cards matching your dashboard layout and color scheme
     cols = st.columns(4)
-    with cols[0]:
-        display_metric("Completed Risks", status_counts.get("Completed On Time", 0) + status_counts.get("Completed Late", 0), "#28a745")
-    with cols[1]:
-        display_metric("In Progress Risks", status_counts.get("In Review", 0) + stwatus_counts.get("In Draft", 0), "#F6BE00")
-    with cols[2]:
-        display_metric("Resolved in Place Risks", status_counts.get("Rejected", 0), "#dc3545")
-    with cols[3]:
-        display_metric("Need Info Risks", status_counts.get("Draft Overdue", 0), "#5d5c5b")
+    with cols[0]: 
+        display_metric("Completed Risks", status_counts.get("Completed On Time", 0) + status_counts.get("Completed Late", 0), "#28a745") # Green
+    with cols[1]: 
+        display_metric("In Progress Risks", status_counts.get("In Review", 0) + status_counts.get("In Draft", 0), "#F6BE00") # Yellow
+    with cols[2]: 
+        display_metric("Resolved in Place Risks", status_counts.get("Rejected", 0), "#dc3545") # Red
+    with cols[3]: 
+        display_metric("Need Info Risks", status_counts.get("Draft Overdue", 0), "#5d5c5b") # Grey
 
     st.markdown("---")
 
@@ -359,9 +360,10 @@ with tab4:
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Status": st.column_config.SelectboxColumn( 
+            "Status": st.column_config.SelectboxColumn(
                 "Status",
-               options=["Completed On Time, "In Draft", "Rejected", "In Review", "Completed Late", "Draft Overdue"],
-                 )
-              }
-          )
+                options=["Completed On Time", "In Draft", "Rejected", "In Review", "Completed Late", "Draft Overdue"],
+                required=True
+            )
+        }
+    )
