@@ -12,20 +12,16 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------
-# HEADER SECTION WITH LOGO (Perfect Center Alignment)
+# HEADER SECTION WITH PERFECT VERTICAL CENTERING
 # -----------------------------------------------------
-header_left, header_right = st.columns([1, 5])
+header_left, header_right = st.columns([1, 4], vertical_alignment="center")
 
 with header_left:
     st.image("century_logo.png", use_container_width=True)
 
 with header_right:
     st.markdown(
-        """
-        <div style="display: flex; align-items: center; height: 100%; min-height: 80px;">
-            <h1 style='margin: 0; font-size: 2.25rem; font-weight: 700; color: #1f2937; line-height: 1.2;'>EHSQ KPI Dashboard</h1>
-        </div>
-        """,
+        "<h1 style='margin: 0;'>EHSQ KPI Dashboard</h1>",
         unsafe_allow_html=True,
     )
 # =====================================================
