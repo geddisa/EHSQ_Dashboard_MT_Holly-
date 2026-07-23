@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------
-# HEADER SECTION WITH LOGO (Inline Straight Line)
+# HEADER SECTION WITH LOGO (Perfect Center Alignment)
 # -----------------------------------------------------
 header_left, header_right = st.columns([1, 5])
 
@@ -22,13 +22,12 @@ with header_left:
 with header_right:
     st.markdown(
         """
-        <div style="display: flex; align-items: center; height: 100%; padding-top: 5px;">
-            <h1 style='margin: 0; font-size: 2.25rem; font-weight: 700; color: #1f2937;'>EHSQ KPI Dashboard</h1>
+        <div style="display: flex; align-items: center; height: 100%; min-height: 80px;">
+            <h1 style='margin: 0; font-size: 2.25rem; font-weight: 700; color: #1f2937; line-height: 1.2;'>EHSQ KPI Dashboard</h1>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
 # =====================================================
 # LOAD DATA
 # =====================================================
