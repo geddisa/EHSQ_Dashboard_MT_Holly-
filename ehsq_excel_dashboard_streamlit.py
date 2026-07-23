@@ -104,7 +104,34 @@ tab1, tab2, tab3, tab4 = tabs
 # =====================================================
 with tab1:
     st.subheader("Incident Breakdown")
+    # -----------------------------------------
+    # Key Metrics Summary
+    # -----------------------------------------
+    if not df_2026.empty:
+        # Define what constitutes a "Severe Incident" or "Total Recordable" based on your classifications
+        severe_types = [
+            'Molten Metal Spill > 25 lbs', 
+            'Molten Metal Explosion (Force 2 or 3)', 
+            'Days Away From Work', 
+            'Recordable - Fatality'
+        ]
+        recordable_types = [
+            'Other Recordable Case', 
+            'Restricted or Transferred Work', 
+            'Days Away From Work', 
+            'Recordable - Fatality'
+        ]
 
+        total_incidents = len(df_2026)
+        severe_incidents = df_2026[df_2026['Injury Classification'].isin(severe_types) | df_2026['Type'].isin(severe_types)].shape[0]
+        total_recordables = df_2026[df_2026['Injury Classification'].isin(recordable_types) | df_2026['Type'].isin(recordable_types)].shape[0]
+
+        m_col1, m_col2, m_col3 = st.columns(3)
+        m_col1.metric("Total Incidents", total_incidents)
+        m_col2.metric("Severe Incidents", severe_incidents)
+        m_col3.metric("Total Recordables", total_recordables)
+        
+        st.divider()
     col1, col2 = st.columns(2)
 
     if not df_2026.empty:
