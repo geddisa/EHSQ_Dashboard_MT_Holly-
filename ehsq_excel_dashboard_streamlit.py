@@ -362,12 +362,6 @@ with tab4:
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
-                options=[
-                    "Completed Risks", 
-                    "In Progress Risks", 
-                    "Resolved in Place Risks", 
-                    "Need Info Risks"
-                ],
                 required=True
             )
         }
