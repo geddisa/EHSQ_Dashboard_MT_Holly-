@@ -342,13 +342,16 @@ with tab4:
             """, unsafe_allow_html=True
         )
 
-    cols = st.columns(6)
-    with cols[0]: display_metric("Completed On Time", status_counts.get("Completed On Time", 0),"#7aeb7a")
-    with cols[1]: display_metric("In Draft", status_counts.get("In Draft", 0),"#28a745")
-    with cols[2]: display_metric("In Review", status_counts.get("In Review", 0), "#F6BE00" )
-    with cols[3]: display_metric("Completed Late", status_counts.get("Completed Late", 0), "#8A2BE2")
-    with cols[4]: display_metric("Rejected", status_counts.get("Rejected", 0), "#dc3545")
-    with cols[5]: display_metric("Draft Overdue", status_counts.get("Draft Overdue", 0), "#5d5c5b")
+    # 4 columns now for your 4 new risk statuses
+    cols = st.columns(4)
+    with cols[0]: 
+        display_metric("Completed Risks", status_counts.get("Completed Risks", 0), "#28a745") # Green
+    with cols[1]: 
+        display_metric("In Progress Risks", status_counts.get("In Progress Risks", 0), "#F6BE00") # Yellow
+    with cols[2]: 
+        display_metric("Resolved in Place Risks", status_counts.get("Resolved in Place Risks", 0), "#dc3545") # Red
+    with cols[3]: 
+        display_metric("Need Info Risks", status_counts.get("Need Info Risks", 0), "#5d5c5b") # Grey
 
     st.markdown("---")
 
@@ -359,7 +362,12 @@ with tab4:
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
-                options=["Completed On Time", "In Draft", "Rejected", "In Review", "Completed Late", "Draft Overdue"],
+                options=[
+                    "Completed Risks", 
+                    "In Progress Risks", 
+                    "Resolved in Place Risks", 
+                    "Need Info Risks"
+                ],
                 required=True
             )
         }
